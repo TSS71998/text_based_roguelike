@@ -1,6 +1,8 @@
 [package]
 name = "hellorust"
 version = "0.1.0"
+author = "Camden Tuttle"
 edition = "2024"
 
 [dependencies]
+rltk = { version = "0.8.0" }
