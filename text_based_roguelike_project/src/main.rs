@@ -1,4 +1,7 @@
-use rltk::{Rltk, GameState};
+use rltk::{Rltk, GameState, RGB, VirtualKeyCode};
+use specs::prelude::*;
+use std::cmp::{max,min};
+use specs_derive::Component;
 
 struct State{}
 impl GameState for State {
@@ -6,6 +9,12 @@ impl GameState for State {
         ctx.cls();
         ctx.print(1,1,"Hello World")
     }
+}
+
+#[derive(Component)]
+struct Position{
+    x: i32,
+    y: i32,
 }
 
 fn main() -> rltk::BError {
