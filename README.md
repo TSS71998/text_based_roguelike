@@ -1,4 +1,5 @@
-```
+
+<pre>
             ,----,                                                                                               
           ,/   .`|                                                                                               
         ,`   .'  :                       ___                ,---,.                                               
@@ -27,7 +28,7 @@
     |:|  |        \::/  /       \::/  /       \::/  /       \:\__\        \:\__\   \/__/        |:|  |        \:\__\    
      \|__|         \/__/         \/__/         \/__/         \/__/         \/__/                 \|__|         \/__/    
                                                                   
-```
+</pre>
 ## Project Description
 
 This is a text-based old school style roguelike made using the roguelike toolkit and based off this project: 
