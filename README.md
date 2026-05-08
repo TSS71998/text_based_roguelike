@@ -1,5 +1,5 @@
-
-<pre>
+<div align="center">
+<pre style="transform: scale(0.5); transform-origin: top center;">
             ,----,                                                                                               
           ,/   .`|                                                                                               
         ,`   .'  :                       ___                ,---,.                                               
@@ -15,7 +15,11 @@
         '---'   |   :    ||   :/\  \ ; |  ,   /         |   :   / ;  :   .'   \'--'.     / |   :    ||   :    :| 
                  \   \  / `---'  `--`   ---`-'          |   | ,'  |  ,     .-./  `--'---'   \   \  /  \   \  /   
                   `----'                                `----'     `--`---'                  `----'    `----'    
-  
+</pre>
+</div>
+
+<div align="center">
+<pre style="transform: scale(0.5); transform-origin: top center;">
       ___           ___           ___           ___           ___           ___                   ___           ___     
      /\  \         /\  \         /\  \         /\__\         /\  \         /\__\      ___        /\__\         /\  \    
     /::\  \       /::\  \       /::\  \       /:/  /        /::\  \       /:/  /     /\  \      /:/  /        /::\  \   
@@ -29,6 +33,7 @@
      \|__|         \/__/         \/__/         \/__/         \/__/         \/__/                 \|__|         \/__/    
                                                                   
 </pre>
+</div>
 ## Project Description
 
 This is a text-based old school style roguelike made using the roguelike toolkit and based off this project: 
