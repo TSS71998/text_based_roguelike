@@ -1,5 +1,5 @@
 [package]
-name = "hellorust"
+name = "text_based_roguelike_project"
 version = "0.1.0"
 author = "Camden Tuttle"
 edition = "2024"

@@ -867,15 +867,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f467dd6dccf739c208452f8014c75c18bb8301b050ad1cfb27153803edb0f51"
 
 [[package]]
-name = "hellorust"
-version = "0.1.0"
-dependencies = [
- "rltk",
- "specs",
- "specs-derive",
-]
-
-[[package]]
 name = "hibitset"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1852,6 +1843,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "text_based_roguelike_project"
+version = "0.1.0"
+dependencies = [
+ "rltk",
+ "specs",
+ "specs-derive",
 ]
 
 [[package]]
