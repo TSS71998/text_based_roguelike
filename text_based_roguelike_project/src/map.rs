@@ -2,17 +2,19 @@ use rltk::{Algorithm2D, BaseMap, Point, RGB, RandomNumberGenerator, Rltk};
 use super::{Rect};
 use std::{cmp::{max, min}};
 use specs::prelude::*;
+use serde::{Serialize, Deserialize};
+use std::collections::HashSet;
 
-const MAPWIDTH: usize = 80;
-const MAPHEIGHT: usize = 43;
-const MAPCOUNT: usize = MAPHEIGHT * MAPWIDTH;
+pub const MAPWIDTH: usize = 80;
+pub const MAPHEIGHT: usize = 43;
+pub const MAPCOUNT: usize = MAPHEIGHT * MAPWIDTH;
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum TileType {
-    Wall, Floor
+    Wall, Floor, DownStairs
 }
 
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Map {
     pub tiles: Vec<TileType>,
     pub rooms: Vec<Rect>,
@@ -21,6 +23,11 @@ pub struct Map {
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles: Vec<bool>,
     pub blocked: Vec<bool>,
+    pub depth: i32,
+    pub bloodstains: HashSet<usize>,
+
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     pub tile_content: Vec<Vec<Entity>>
 }
 
@@ -74,7 +81,7 @@ impl Map{
         }
     }
 
-    pub fn new_map_rooms_and_corridors() -> Map {
+    pub fn new_map_rooms_and_corridors(new_depth: i32) -> Map {
         let mut map = Map {
             tiles: vec![TileType::Wall; MAPCOUNT],
             rooms: Vec::new(),
@@ -83,7 +90,9 @@ impl Map{
             revealed_tiles: vec![false; MAPCOUNT],
             visible_tiles: vec![false; MAPCOUNT],
             blocked: vec![false; MAPCOUNT],
-            tile_content: vec![Vec::new(); MAPCOUNT]
+            tile_content: vec![Vec::new(); MAPCOUNT],
+            depth: new_depth,
+            bloodstains: HashSet::new()
         };
         
         const MAX_ROOMS: i32 = 30;
@@ -120,6 +129,10 @@ impl Map{
                 map.rooms.push(new_room);
             }
         }
+
+        let stairs_position = map.rooms[map.rooms.len()-1].center();
+        let stairs_idx = map.xy_idx(stairs_position.0, stairs_position.1);
+        map.tiles[stairs_idx] = TileType::DownStairs;
 
         map
     }
@@ -163,7 +176,40 @@ impl BaseMap for Map {
     }
 }
 
+fn wall_glyph(map: &Map, x: i32, y: i32) -> rltk::FontCharType {
+    if x < 1 || x > map.width - 2 || y < 1 || y > map.height - 2 as i32 {return 35;}
+    let mut mask: u8 = 0;
 
+    if is_revealed_and_wall(map, x, y - 1) {mask += 1;}
+    if is_revealed_and_wall(map, x, y + 1) {mask += 2;}
+    if is_revealed_and_wall(map, x - 1, y) {mask += 4;}
+    if is_revealed_and_wall(map, x + 1, y) {mask += 8;}
+
+    match mask {
+        0 => {9}
+        1 => {186}
+        2 => {186}
+        3 => {186}
+        4 => {205}
+        5 => {188}
+        6 => {187}
+        7 => {185}
+        8 => {205}
+        9 => {200}
+        10 => {201}
+        11 => {204}
+        12 => {205}
+        13 => {202}
+        14 => {203}
+        15 => {206}
+        _ => {35}
+    }
+}
+
+fn is_revealed_and_wall(map: &Map, x: i32, y: i32) -> bool {
+    let idx = map.xy_idx(x, y);
+    map.tiles[idx] == TileType::Wall && map.revealed_tiles[idx]
+}
 
 pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
     let map = ecs.fetch::<Map>();
@@ -174,18 +220,24 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
         if map.revealed_tiles[idx] {
             let glyph;
             let mut fg;
+            let mut bg = RGB::from_f32(0.0, 0.0, 0.0);
             match tile {
                 TileType::Floor => {
                     glyph = rltk::to_cp437('.');
                     fg = RGB::from_f32(0.0, 0.5, 0.5);
                 }
                 TileType::Wall => {
-                    glyph = rltk::to_cp437('#');
+                    glyph = wall_glyph(&*map, x, y);
                     fg = RGB::from_f32(0., 1.0, 0.);
                 }
+                TileType::DownStairs => {
+                    glyph = rltk::to_cp437('>');
+                    fg = RGB::from_f32(0.0, 1.0, 1.0);
+                }
             }
+            if map.bloodstains.contains(&idx) {bg = RGB::from_f32(0.75, 0.0, 0.0);}
             if !map.visible_tiles[idx] {fg = fg.to_greyscale()}
-            ctx.set(x, y, fg, RGB::from_f32(0., 0., 0.), glyph);
+            ctx.set(x, y, fg, bg, glyph);
         }
         
 
