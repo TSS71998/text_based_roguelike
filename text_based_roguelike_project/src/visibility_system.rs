@@ -15,6 +15,7 @@ impl<'a> System<'a> for VisibilitySystem {
                         WriteExpect<'a, GameLog>,
                         ReadStorage<'a, Name>
                         );
+                        
     fn run(&mut self, data: Self::SystemData) {
         let (mut map, entites, mut viewshed, pos, player,
             mut hidden, mut rng, mut log, names) = data;
