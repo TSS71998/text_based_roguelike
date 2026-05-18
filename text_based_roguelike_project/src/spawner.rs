@@ -1,16 +1,12 @@
 use std::collections::HashMap;
 use rltk::{RGB, RandomNumberGenerator};
 use specs::prelude::*;
-use crate::TileType;
-
 use super::{CombatStats, Player, Renderable, Name, Position, Viewshed, Monster, BlocksTile, 
             Rect, Item, Consumable, ProvidesHealing, Ranged, InflictsDamage, Confusion, SerializeMe,
             AreaEffect, random_table::RandomTable, EquipmentSlot, Equippable, MeleePowerBonus,
             DefenseBonus, HungerClock, HungerState, Hidden, MagicMapper, ProvidesFood, EntryTrigger,
-            SingleActivation, Map};
+            SingleActivation, Map, Door, BlocksVisibility, TileType};
 use specs::saveload::{MarkedBuilder, SimpleMarker};
-
-const MAPWIDTH: usize = 80;
 
 const MAX_MONSTERS: i32 = 4;
 
@@ -115,8 +111,11 @@ pub fn spawn_room(map: &Map, rng: &mut RandomNumberGenerator, room: &Rect, map_d
 }
 
 pub fn spawn_entity(ecs: &mut World, spawn: &(&usize, &String)) {
-    let x = (*spawn.0 % MAPWIDTH)  as i32;
-    let y = (*spawn.0 / MAPWIDTH) as i32;
+    let map = ecs.fetch::<Map>();
+    let width = map.width as usize;
+    let x = (*spawn.0 % width)  as i32;
+    let y = (*spawn.0 / width) as i32;
+    std::mem::drop(map);
 
     match spawn.1.as_ref(){
         "Goblin" => goblin(ecs, x, y),
@@ -132,6 +131,7 @@ pub fn spawn_entity(ecs: &mut World, spawn: &(&usize, &String)) {
         "Rations" => rations(ecs, x, y),
         "Magic Mapping Scroll" => magic_mapping_scroll(ecs, x, y),
         "Bear Trap" => bear_trap(ecs, x, y),
+        "Door" => door(ecs, x, y),
         _ => {}
     }
 }
@@ -336,6 +336,24 @@ fn bear_trap(ecs: &mut World, x: i32, y: i32) {
         .with(EntryTrigger{})
         .with(InflictsDamage{damage: 6})
         .with(SingleActivation{})
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build();
+}
+
+fn door(ecs: &mut World, x: i32, y: i32) {
+    ecs
+        .create_entity()
+        .with(Position{x,y})
+        .with(Renderable{
+            glyph: rltk::to_cp437('+'),
+            fg: RGB::named(rltk::CHOCOLATE),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2
+        })
+        .with(Name{name: "Door".to_string()})
+        .with(BlocksTile{})
+        .with(BlocksVisibility{})
+        .with(Door{open: false})
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
