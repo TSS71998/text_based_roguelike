@@ -2,6 +2,8 @@ use rltk::{GameState, Point, Rltk};
 use specs::{prelude::*};
 use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
 
+#[macro_use]
+extern crate lazy_static;
 
 mod map;
 pub use map::*;
@@ -26,6 +28,8 @@ mod gamelog;
 mod spawner;
 mod inventory_system;
 use inventory_system::*;
+mod gamesystem;
+pub use gamesystem::*;
 pub mod saveload_system;
 pub mod random_table;
 pub mod particle_system;
@@ -34,6 +38,8 @@ pub mod rex_assets;
 pub mod trigger_system;
 pub mod map_builders;
 pub mod camera;
+pub mod raws;
+pub mod bystander_ai_systems;
 
 const SHOW_MAPGEN_VISUALIZER: bool = false;
 
@@ -88,6 +94,8 @@ impl State {
         hunger.run_now(&self.ecs);
         let mut particles = particle_system::ParticleSpawnSystem{};
         particles.run_now(&self.ecs);
+        let mut bystander = bystander_ai_systems::BystanderAI{};
+        bystander.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -317,14 +325,8 @@ impl State {
         }
         self.generate_world_map(current_depth + 1);
 
-        let player_entity = self.ecs.fetch::<Entity>();
         let mut gamelog = self.ecs.fetch_mut::<gamelog::GameLog>();
         gamelog.entries.push("You descend to the next level, and take a moment to heal.".to_string());
-        let mut player_health_store = self.ecs.write_storage::<CombatStats>();
-        let player_health = player_health_store.get_mut(*player_entity);
-        if let Some(player_health) = player_health {
-            player_health.hp = i32::max(player_health.hp, player_health.max_hp / 2);
-        }
     }
 
     fn game_over_cleanup(&mut self) {
@@ -350,7 +352,7 @@ impl State {
         self.mapgen_timer = 0.0;
         self.mapgen_history.clear();
         let mut rng = self.ecs.write_resource::<rltk::RandomNumberGenerator>();
-        let mut builder = map_builders::random_builder(new_depth, &mut rng, 80, 50);
+        let mut builder = map_builders::level_builder(new_depth, &mut rng, 80, 50);
         builder.build_map(&mut rng);
         std::mem::drop(rng);
         self.mapgen_history = builder.build_data.history.clone();
@@ -407,7 +409,6 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Monster>();
     gs.ecs.register::<Name>();
     gs.ecs.register::<BlocksTile>();
-    gs.ecs.register::<CombatStats>();
     gs.ecs.register::<WantsToMelee>();
     gs.ecs.register::<SufferDamage>();
     gs.ecs.register::<Item>();
@@ -423,10 +424,11 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Confusion>();
     gs.ecs.register::<SimpleMarker<SerializeMe>>();
     gs.ecs.register::<SerializationHelper>();
+    gs.ecs.register::<MapEncoderSerializeHelper>();
     gs.ecs.register::<Equippable>();
     gs.ecs.register::<Equipped>();
-    gs.ecs.register::<MeleePowerBonus>();
-    gs.ecs.register::<DefenseBonus>();
+    gs.ecs.register::<MeleeWeapon>();
+    gs.ecs.register::<Wearable>();
     gs.ecs.register::<WantsToRemoveItem>();
     gs.ecs.register::<ParticleLifetime>();
     gs.ecs.register::<HungerClock>();
@@ -438,8 +440,18 @@ fn main() -> rltk::BError {
     gs.ecs.register::<SingleActivation>();
     gs.ecs.register::<BlocksVisibility>();
     gs.ecs.register::<Door>();
+    gs.ecs.register::<Bystander>();
+    gs.ecs.register::<Vendor>();
+    gs.ecs.register::<Quips>();
+    gs.ecs.register::<Attribute>();
+    gs.ecs.register::<Attributes>();
+    gs.ecs.register::<Skills>();
+    gs.ecs.register::<Pools>();
+    gs.ecs.register::<NaturalAttackDefense>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
+
+    raws::load_raws();
 
     gs.ecs.insert(Map::new(1, 80, 50));
     gs.ecs.insert(Point::new(0,0));

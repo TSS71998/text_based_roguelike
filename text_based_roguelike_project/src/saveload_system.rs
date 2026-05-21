@@ -1,6 +1,8 @@
 use specs::prelude::*;
 use specs::saveload::{SimpleMarker, SimpleMarkerAllocator, SerializeComponents, DeserializeComponents, MarkedBuilder};
 use std::convert::Infallible;
+use crate::MapEncoded;
+
 use super::components::*;
 use std::fs::File;
 use std::path::Path;
@@ -26,10 +28,14 @@ pub fn save_game(ecs: &mut World) {}
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save_game(ecs: &mut World) {
+    use crate::MapEncoded;
+
     let mapcopy = ecs.get_mut::<super::map::Map>().unwrap().clone();
+    let map_encode = MapEncoded::encoding(&mapcopy);   
+     
     let savehelper = ecs
         .create_entity()
-        .with(SerializationHelper{map: mapcopy})
+        .with(MapEncoderSerializeHelper{map_encoded: map_encode})
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 
@@ -38,11 +44,14 @@ pub fn save_game(ecs: &mut World) {
 
         let writer = File::create("./savegame.json").unwrap();
         let mut serializer = serde_json::Serializer::new(writer);
+
         serialize_individually!(ecs, serializer, data, Position, Renderable, Player, Viewshed, Monster,
-            Name, BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable, Ranged, InflictsDamage,
-            AreaEffect, Confusion, ProvidesHealing, InBackpack, WantsToPickupItem, WantsToUseItem, 
-            WantsToDropItem, SerializationHelper, Equippable, Equipped, WantsToRemoveItem, ParticleLifetime, HungerClock,
-            ProvidesFood, MagicMapper, Hidden, EntryTrigger, EntityMoved, SingleActivation, BlocksVisibility, Door
+            Name, BlocksTile, SufferDamage, WantsToMelee, Item, Consumable, Ranged, InflictsDamage,
+            AreaEffect, Confusion, ProvidesHealing, InBackpack, WantsToPickupItem, WantsToUseItem,
+            WantsToDropItem, MapEncoderSerializeHelper, Equippable, Equipped, MeleeWeapon, Wearable,
+            WantsToRemoveItem, ParticleLifetime, HungerClock, ProvidesFood, MagicMapper, Hidden,
+            EntryTrigger, EntityMoved, SingleActivation, BlocksVisibility, Door, Bystander, Vendor,
+            Quips, Attributes, Skills, Pools, NaturalAttackDefense
         );
     }
     ecs.delete_entity(savehelper).expect("Crash on cleanup");
@@ -83,23 +92,27 @@ pub fn load_game(ecs: &mut World) {
 
     {
         let mut d = (&mut ecs.entities(), &mut ecs.write_storage::<SimpleMarker<SerializeMe>>(), &mut ecs.write_resource::<SimpleMarkerAllocator<SerializeMe>>());
+
         deserialize_individually!(ecs, de, d, Position, Renderable, Player, Viewshed, Monster,
-            Name, BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable, Ranged, InflictsDamage,
-            AreaEffect, Confusion, ProvidesHealing, InBackpack, WantsToPickupItem, WantsToUseItem, 
-            WantsToDropItem, SerializationHelper, Equippable, Equipped, WantsToRemoveItem, ParticleLifetime, HungerClock,
-            ProvidesFood, MagicMapper, Hidden, EntryTrigger, EntityMoved, SingleActivation, BlocksVisibility, Door
+            Name, BlocksTile, SufferDamage, WantsToMelee, Item, Consumable, Ranged, InflictsDamage,
+            AreaEffect, Confusion, ProvidesHealing, InBackpack, WantsToPickupItem, WantsToUseItem,
+            WantsToDropItem, MapEncoderSerializeHelper, Equippable, Equipped, MeleeWeapon, Wearable,
+            WantsToRemoveItem, ParticleLifetime, HungerClock, ProvidesFood, MagicMapper, Hidden,
+            EntryTrigger, EntityMoved, SingleActivation, BlocksVisibility, Door, Bystander, Vendor,
+            Quips, Attributes, Skills, Pools, NaturalAttackDefense
         );
     }
 
     let mut deleteme: Option<Entity> = None;
     {
         let entities = ecs.entities();
-        let helper = ecs.read_storage::<SerializationHelper>();
+        let helper = ecs.read_storage::<MapEncoderSerializeHelper>();
         let player = ecs.read_storage::<Player>();
         let position = ecs.read_storage::<Position>();
         for (e, h) in (&entities, &helper).join() {
             let mut worldmap = ecs.write_resource::<super::map::Map>();
-            *worldmap = h.map.clone();
+            let decoded = MapEncoded::decoding(h.map_encoded.clone());
+            *worldmap = decoded.clone();
             worldmap.tile_content = vec![Vec::new(); (worldmap.height * worldmap.width) as usize];
             deleteme = Some(e);
         }
