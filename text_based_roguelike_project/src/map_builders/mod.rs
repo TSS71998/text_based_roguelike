@@ -56,6 +56,10 @@ mod room_draw;
 use room_draw::*;
 mod town;
 use town::town_builder;
+mod forest;
+use forest::forest_builder;
+mod limestone_cavern;
+use limestone_cavern::*;
 mod common;
 use common::*;
 use specs::prelude::*;
@@ -90,13 +94,13 @@ pub struct BuilderChain {
 }
 
 impl BuilderChain {
-    pub fn new(new_depth: i32, width: i32, height: i32) -> BuilderChain {
+    pub fn new<S: ToString>(new_depth: i32, width: i32, height: i32, name: S) -> BuilderChain {
         BuilderChain {
             starter: None,
             builders: Vec::new(),
             build_data: BuilderMap {
                 spawn_list: Vec::new(),
-                map: Map::new(new_depth, width, height),
+                map: Map::new(new_depth, width, height, name),
                 starting_position: None,
                 rooms: None,
                 corridors: None,
@@ -150,12 +154,14 @@ pub fn level_builder(new_depth: i32, rng: &mut rltk::RandomNumberGenerator, widt
     rltk::console::log(format!("Depth: {}", new_depth));
     match new_depth {
         1 => town_builder(new_depth, rng, width, height),
+        2 => forest_builder(new_depth, rng, width, height),
+        3 => limestone_cavern_builder(new_depth, rng, width, height),
         _ => random_builder(new_depth, rng, width, height)
     }
 }
 
 pub fn random_builder(new_depth: i32, rng: &mut rltk::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
-    let mut builder = BuilderChain::new(new_depth, width, height);
+    let mut builder = BuilderChain::new(new_depth, width, height, "New Map");
     let type_roll = rng.roll_dice(1, 2);
     match type_roll {
         1 => random_room_builder(rng, &mut builder),

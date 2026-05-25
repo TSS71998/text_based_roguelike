@@ -21,12 +21,13 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         ReadStorage<'a, Equipped>,
                         ReadStorage<'a, MeleeWeapon>,
                         ReadStorage<'a, Wearable>,
-                        ReadStorage<'a, NaturalAttackDefense>
+                        ReadStorage<'a, NaturalAttackDefense>,
+                        ReadExpect<'a, Entity>
                     );
 
     fn run(&mut self, data: Self::SystemData) {
         let (entities, mut log, mut wants_melee, names, attributes, skills, mut inflict_damage, 
-            mut particle_builder, positions, hunger_clocks, pools, mut rng, equipped_items, meleeweapons, wearables, natural) = data;
+            mut particle_builder, positions, hunger_clocks, pools, mut rng, equipped_items, meleeweapons, wearables, natural, player_entity) = data;
 
         for (entity, wants_melee, name, attacker_attributes, attacker_skills, attacker_pools) in (&entities, &wants_melee, &names, &attributes, &skills, &pools).join() {
             let target_pools = pools.get(wants_melee.target).unwrap();
@@ -96,7 +97,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     let weapon_damage_bonus = weapon_info.damage_bonus;
 
                     let damage = i32::max(0, base_damage + attr_damage_bonus + skill_hit_bonus + skill_damage_bonus + weapon_damage_bonus);
-                    SufferDamage::new_damage(&mut inflict_damage, wants_melee.target, damage);
+                    SufferDamage::new_damage(&mut inflict_damage, wants_melee.target, damage, entity == *player_entity);
                     log.entries.push(format!("{} hits {}, for {} hp.", &name.name, &target_name.name, damage));
                     if let Some(pos) = positions.get(wants_melee.target) {
                         particle_builder.requests(pos.x, pos.y, rltk::RGB::named(rltk::ORANGE), rltk::RGB::named(rltk::BLACK), rltk::to_cp437('‼'), 200.0);

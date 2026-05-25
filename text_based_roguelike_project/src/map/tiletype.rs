@@ -4,6 +4,8 @@ use specs::rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 #[derive(PartialEq, Copy, Clone, Serialize, Deserialize, Eq, Hash)]
 pub enum TileType {
     Wall, 
+    Stalactite, 
+    Stalagmite,
     Floor, 
     DownStairs,
     Road,
@@ -12,13 +14,15 @@ pub enum TileType {
     DeepWater,
     WoodFloor,
     Bridge,
-    Gravel
+    Gravel,
+    UpStairs
 }
 
 pub fn tile_walkable(tt: TileType) -> bool {
     match tt {
         TileType::Floor | TileType::DownStairs | TileType::Road | TileType::Grass |
-        TileType::ShallowWater | TileType::WoodFloor | TileType::Bridge | TileType::Gravel
+        TileType::ShallowWater | TileType::WoodFloor | TileType::Bridge | TileType::Gravel | 
+        TileType::UpStairs
             => true,
           _ => false
     }
@@ -26,7 +30,7 @@ pub fn tile_walkable(tt: TileType) -> bool {
 
 pub fn tile_opaque(tt: TileType) -> bool {
     match tt {
-        TileType::Wall => true,
+        TileType::Wall | TileType::Stalactite | TileType::Stalagmite => true,
         _ => false
     }
 }
@@ -56,6 +60,9 @@ impl TileEncoder {
             TileType::WoodFloor => 7,
             TileType::Bridge => 8,
             TileType::Gravel => 9,
+            TileType::UpStairs => 10,
+            TileType::Stalactite => 11,
+            TileType::Stalagmite => 12
         }).collect())
     }
 
@@ -71,6 +78,9 @@ impl TileEncoder {
             7 => TileType::WoodFloor,
             8 => TileType::Bridge,
             9 => TileType::Gravel,
+            10 => TileType::UpStairs,
+            11 => TileType::Stalactite,
+            12 => TileType::Stalagmite,
             _ => unimplemented!()
         }).collect()
     }

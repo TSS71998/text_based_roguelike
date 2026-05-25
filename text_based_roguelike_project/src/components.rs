@@ -50,22 +50,26 @@ pub struct WantsToMelee {
 
 #[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct SufferDamage {
-    pub amount: Vec<i32>
+    pub amount: Vec<(i32, bool)>
 }
 
 impl SufferDamage {
-    pub fn new_damage(store: &mut WriteStorage<SufferDamage>, victim: Entity, amount: i32) {
+    pub fn new_damage(store: &mut WriteStorage<SufferDamage>, victim: Entity, amount: i32, from_player: bool) {
         if let Some(suffering) = store.get_mut(victim) {
-            suffering.amount.push(amount);
+            suffering.amount.push((amount, from_player));
         } else {
-            let dmg = SufferDamage{amount: vec![amount]};
+            let dmg = SufferDamage{amount: vec![(amount, from_player)]};
             store.insert(victim, dmg).expect("Unable to insert damage");
         }
     }
 }
 
 #[derive(Component, Debug, Serialize, Deserialize, Clone)]
-pub struct Item {}
+pub struct Item {
+    pub initiative_penalty: f32,
+    pub weight_lbs: f32,
+    pub base_value: f32
+}
 
 #[derive(Component, Debug, ConvertSaveload)]
 pub struct InBackpack {
@@ -122,6 +126,11 @@ pub struct SerializeMe;
 #[derive(Component, Serialize, Deserialize, Clone)]
 pub struct SerializationHelper {
     pub map: super::map::Map
+}
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct DMSerializationHelper {
+    pub map: super::map::MasterDungeonMap
 }
 
 #[derive(Component, Serialize, Deserialize, Clone)]
@@ -233,7 +242,9 @@ pub struct Pools {
     pub hit_points: Pool,
     pub mana: Pool,
     pub xp: i32,
-    pub level: i32
+    pub level: i32,
+    pub total_weight: f32,
+    pub total_initiative_penalty: f32
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
@@ -268,3 +279,69 @@ pub struct NaturalAttackDefense {
     pub armor_class: Option<i32>,
     pub attacks: Vec<NaturalAttack>
 }
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct LootTable {
+    pub table: String
+}
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct Carnivore {}
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct Herbivore {}
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct OtherLevelPosition {
+    pub x: i32,
+    pub y: i32,
+    pub depth: i32
+}
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct LightSource {
+    pub color: RGB,
+    pub range: i32
+}
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct Initiative {
+    pub current: i32
+}
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct MyTurn {}
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct Faction {
+    pub name: String
+}
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct WantsToApproach {
+    pub idx: i32
+}
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct WantsToFlee {
+    pub indices: Vec<usize>
+}
+
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
+pub enum Movement {
+    Static,
+    Random,
+    RandomWaypoint {path: Option<Vec<usize>>}
+}
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct MoveMode{
+    pub mode: Movement
+}
+
+#[derive(Component, ConvertSaveload, Clone, Debug)]
+pub struct Chasing {
+    pub target: Entity
+}
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+pub struct EquipmentChanged {}

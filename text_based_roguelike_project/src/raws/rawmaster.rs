@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
-use crate::{attr_bonus, mana_at_level, npc_hp, random_table::RandomTable};
+use crate::{attr_bonus, mana_at_level, npc_hp, random_table::RandomTable, raws::faction_structs::Reaction};
 use super::{Raws};
 use crate::components::*;
 use regex::Regex;
@@ -37,16 +37,20 @@ pub struct RawMaster {
     raws: Raws,
     item_index: HashMap<String, usize>,
     mob_index: HashMap<String, usize>,
-    prop_index: HashMap<String, usize>
+    prop_index: HashMap<String, usize>,
+    loot_index: HashMap<String, usize>,
+    faction_index: HashMap<String, HashMap<String, Reaction>>
 }
 
 impl RawMaster {
     pub fn empty() -> RawMaster {
         RawMaster {
-            raws: Raws { items: Vec::new(), mobs: Vec::new(), props: Vec::new(), spawn_table: Vec::new() },
+            raws: Raws { items: Vec::new(), mobs: Vec::new(), props: Vec::new(), spawn_table: Vec::new(), loot_tables: Vec::new(), faction_table: Vec::new() },
             item_index: HashMap::new(),
             mob_index: HashMap::new(),
-            prop_index: HashMap::new()
+            prop_index: HashMap::new(),
+            loot_index: HashMap::new(),
+            faction_index: HashMap::new()
         }
     }
 
@@ -79,6 +83,24 @@ impl RawMaster {
             if !used_names.contains(&spawn.name){
                 rltk::console::log(format!("WARNING: Spawn tables references unspecified entity [{}]", spawn.name));
             }
+        }
+
+        for (i, loot) in self.raws.loot_tables.iter().enumerate() {
+            self.loot_index.insert(loot.name.clone(), i);
+        }
+        for faction in self.raws.faction_table.iter() {
+            let mut reactions: HashMap<String, Reaction> = HashMap::new();
+            for other in faction.responses.iter() {
+                reactions.insert(
+                    other.0.clone(),
+                    match other.1.as_str() {
+                        "ignore" => Reaction::Ignore,
+                        "flee" => Reaction::Flee,
+                        _ => Reaction::Attack
+                    }
+                );
+            }
+            self.faction_index.insert(faction.name.clone(), reactions);
         }
     }
 }
@@ -136,7 +158,11 @@ pub fn spawn_named_item(raws: &RawMaster, ecs: &mut World, key: &str, pos: Spawn
 
         eb = eb.with(Name{name: item_template.name.clone()});
 
-        eb = eb.with(crate::components::Item{});
+        eb = eb.with(crate::components::Item{
+            initiative_penalty: item_template.initiative_penalty.unwrap_or(0.0),
+            weight_lbs: item_template.weight_lbs.unwrap_or(0.0),
+            base_value: item_template.base_value.unwrap_or(0.0)
+        });
 
         if let Some(consumable) = &item_template.consumable {
             eb = eb.with(crate::components::Consumable{});
@@ -201,11 +227,10 @@ pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnT
 
         eb = eb.with(Name{name: mob_template.name.clone()});
 
-        match mob_template.ai.as_ref() {
-            "melee" => eb = eb.with(Monster{}),
-            "bystander" => eb = eb.with(Bystander{}),
-            "vendor" => eb = eb.with(Vendor{}),
-            _ => {}
+        match mob_template.movement.as_ref() {
+            "random" => eb = eb.with(MoveMode{mode: Movement::Random}),
+            "random_waypoint" => eb = eb.with(MoveMode{mode: Movement::RandomWaypoint { path: None }}),
+            _ => eb = eb.with(MoveMode{mode: Movement::Static})
         }
 
         if let Some(quips) = &mob_template.quips {
@@ -250,7 +275,9 @@ pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnT
             level: mob_level,
             xp: 0,
             hit_points: Pool { max: mob_hp, current: mob_hp },
-            mana: Pool { max: mob_mana, current: mob_mana }
+            mana: Pool { max: mob_mana, current: mob_mana },
+            total_weight: 0.0,
+            total_initiative_penalty: 0.0
         };
         eb = eb.with(pools);
 
@@ -269,6 +296,23 @@ pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnT
             }
         }
         eb = eb.with(skills);
+
+        if let Some(loot) = &mob_template.loot_table {
+            eb = eb.with(LootTable{table: loot.clone()});
+        }
+
+        if let Some(light) = &mob_template.light {
+            eb = eb.with(LightSource{range: light.range, color: rltk::RGB::from_hex(&light.color).expect("Bad Color")});
+        }
+
+        if let Some(faction) = &mob_template.faction {
+            eb = eb.with(Faction{name: faction.clone()});
+        } else {
+            eb = eb.with(Faction{name: "Mindless".to_string()})
+        }
+
+        eb = eb.with(Initiative{current: 2});
+        eb = eb.with(EquipmentChanged{});
 
         eb = eb.with(Viewshed{visible_tiles: Vec::new(), range: mob_template.vision_range, dirty: true});
 
@@ -387,4 +431,30 @@ fn get_renderable_component(renderable: &super::item_structs::Renderable) -> cra
         bg: rltk::RGB::from_hex(&renderable.bg).expect("Invalid RGB"),
         render_order: renderable.order
     }
+}
+
+pub fn get_item_drop(raws: &RawMaster, rng: &mut rltk::RandomNumberGenerator, table: &str) -> Option<String> {
+    if raws.loot_index.contains_key(table) {
+        let mut rt = RandomTable::new();
+        let available_options = &raws.raws.loot_tables[raws.loot_index[table]];
+        for item in available_options.drops.iter() {
+            rt = rt.add(item.name.clone(), item.weight);
+        }
+        return  Some(rt.roll(rng));
+    }
+    None
+}
+
+pub fn faction_reaction(my_faction: &str, their_faction: &str, raws: &RawMaster) -> Reaction {
+    if raws.faction_index.contains_key(my_faction) {
+        let mf = &raws.faction_index[my_faction];
+        if mf.contains_key(their_faction) {
+            return mf[their_faction];
+        } else if mf.contains_key("Default") {
+            return mf["Default"];
+        } else {
+            return Reaction::Ignore;
+        }
+    }
+    Reaction::Ignore
 }
