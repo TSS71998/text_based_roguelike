@@ -1,7 +1,12 @@
+use rltk::console;
 use specs::prelude::*;
 use crate::{EntityMoved, Map, MoveMode, Movement, MyTurn, Position, Viewshed, tile_walkable};
+use crate::{GAME_TICK};
+use std::sync::atomic::{Ordering};
 
 pub struct DefaultMoveAI {}
+
+const RESTAGGER:u32= 4;
 
 impl<'a> System<'a> for DefaultMoveAI {
     #[allow(clippy::type_complexity)]
@@ -21,6 +26,7 @@ impl<'a> System<'a> for DefaultMoveAI {
         let mut turn_done: Vec<Entity> = Vec::new();
         for (entity, pos, mode, viewshed, _myturn) in (&entities, &mut positions, &mut move_mode, &mut viewsheds, &turns).join() {
             turn_done.push(entity);
+            
             
             match &mut mode.mode {
                 Movement::Static => {},
@@ -69,13 +75,17 @@ impl<'a> System<'a> for DefaultMoveAI {
                         let target_y = rng.roll_dice(1, map.height - 2);
                         let idx = map.xy_idx(target_x, target_y);
                         if tile_walkable(map.tiles[idx]) {
-                            let path = rltk::a_star_search(
-                                map.xy_idx(pos.x, pos.y),
-                                map.xy_idx(target_x, target_y), 
-                                &mut *map
-                            );
-                            if path.success && path.steps.len() > 1 {
-                                mode.mode = Movement::RandomWaypoint { path: Some(path.steps) };
+                            if (GAME_TICK.load(Ordering::Relaxed) as u32 + entity.id()) % RESTAGGER == 3{
+                                console::log(format!("A* entity id: {}, target x: {}, target y: {}, tick_count: {}", entity.id(), target_x, target_y, GAME_TICK.load(Ordering::Relaxed)));
+                                let path = rltk::a_star_search(
+                                    map.xy_idx(pos.x, pos.y),
+                                    map.xy_idx(target_x, target_y), 
+                                    &mut *map
+                                );
+
+                                if path.success && path.steps.len() > 1 {
+                                    mode.mode = Movement::RandomWaypoint { path: Some(path.steps) };
+                                }
                             }
                         }
                     }

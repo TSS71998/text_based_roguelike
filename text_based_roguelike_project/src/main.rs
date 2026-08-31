@@ -1,6 +1,7 @@
-use rltk::{GameState, Point, Rltk};
+use rltk::{GameState, Point, Rltk, console};
 use specs::{prelude::*};
 use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[macro_use]
 extern crate lazy_static;
@@ -42,6 +43,7 @@ pub mod lighting_system;
 pub mod spatial;
 
 const SHOW_MAPGEN_VISUALIZER: bool = false;
+static GAME_TICK: AtomicU64 = AtomicU64::new(0);
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState {
@@ -167,6 +169,8 @@ impl GameState for State {
                 while newrunstate == RunState::Ticking{
                     self.run_systems();
                     self.ecs.maintain();
+                    GAME_TICK.fetch_add(1, Ordering::Relaxed);
+                    console::log(format!("tick_count: {}", GAME_TICK.load(Ordering::Relaxed)));
                     match *self.ecs.fetch::<RunState>() {
                         RunState::AwaitingInput => newrunstate = RunState::AwaitingInput,
                         RunState::MagicMapReveal { .. } => newrunstate = RunState::MagicMapReveal { row: 0 },

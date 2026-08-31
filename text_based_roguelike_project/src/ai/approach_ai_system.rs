@@ -1,6 +1,10 @@
 use specs::prelude::*;
 use crate::{MyTurn, WantsToApproach, Position, Map, Viewshed, EntityMoved};
+use crate::{GAME_TICK};
+use rltk::console;
+use std::sync::atomic::{Ordering};
 
+const RESTAGGER:u32= 4;
 pub struct ApproachAI {}
 
 impl<'a> System<'a> for ApproachAI {
@@ -23,21 +27,24 @@ impl<'a> System<'a> for ApproachAI {
         for (entity, pos, approach, viewshed, _myturn) in
             (&entities, &mut positions, &want_approach, &mut viewsheds, &turns).join()
         {
-            turn_done.push(entity);
-            let path = rltk::a_star_search(
-                map.xy_idx(pos.x, pos.y),
-                map.xy_idx(approach.idx % map.width, approach.idx / map.width),
-                &mut *map
-            );
-            if path.success && path.steps.len()>1 {
-                let idx = map.xy_idx(pos.x, pos.y);
-                pos.x = path.steps[1] as i32 % map.width;
-                pos.y = path.steps[1] as i32 / map.width;
-                entity_moved.insert(entity, EntityMoved{}).expect("Unable to insert marker");
-                let new_idx = map.xy_idx(pos.x, pos.y);
-                crate::spatial::move_entity(entity, idx, new_idx);
-                viewshed.dirty = true;
-            }
+            if (GAME_TICK.load(Ordering::Relaxed) as u32 + entity.id()) % RESTAGGER == 3 {
+                console::log(format!("A* entity id: {}, tick_count: {}", entity.id(), GAME_TICK.load(Ordering::Relaxed)));
+                turn_done.push(entity);
+                let path = rltk::a_star_search(
+                    map.xy_idx(pos.x, pos.y),
+                    map.xy_idx(approach.idx % map.width, approach.idx / map.width),
+                    &mut *map
+                );
+                if path.success && path.steps.len()>1 {
+                    let idx = map.xy_idx(pos.x, pos.y);
+                    pos.x = path.steps[1] as i32 % map.width;
+                    pos.y = path.steps[1] as i32 / map.width;
+                    entity_moved.insert(entity, EntityMoved{}).expect("Unable to insert marker");
+                    let new_idx = map.xy_idx(pos.x, pos.y);
+                    crate::spatial::move_entity(entity, idx, new_idx);
+                    viewshed.dirty = true;
+                }    
+            }  
         }
 
         want_approach.clear();

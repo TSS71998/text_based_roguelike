@@ -114,7 +114,7 @@ impl BuilderChain {
     pub fn start_with(&mut self, starter: Box<dyn InitialMapBuilder>) {
         match self.starter {
             None => self.starter = Some(starter),
-            Some(_) => panic!("YOu can only have one starting builder.")
+            Some(_) => panic!("You can only have one starting builder.")
         };
     }
 
