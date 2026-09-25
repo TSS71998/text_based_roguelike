@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/title-script.svg" alt="text_based_roguelike" width="100%">
+  <img src="./resources/title-script.svg" alt="text_based_roguelike" width="100%">
 </p>
 
 <p align="center">
