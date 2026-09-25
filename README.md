@@ -1,6 +1,9 @@
 <p align="center">
   <img src="./resources/title-script.svg" alt="text_based_roguelike" width="100%">
 </p>
+<p align="center">
+  <img src="./resources/title-block.svg" alt="text_based_roguelike" width="100%">
+</p>
 
 <p align="center">
   <em>An old-school, ASCII, text-based roguelike written in Rust.</em>
@@ -62,6 +65,7 @@ Movement and actions use standard roguelike keybindings (arrow keys / numpad or 
 - [ ] Add more enemy types and items
 - [ ] Introduce a more unique world/story identity
 - [ ] Polish UI/UX for terminal rendering
+- [ ] Continued Optimizations
 
 Contributions, ideas, and issue reports are welcome as this project develops.
 
