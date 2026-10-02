@@ -27,7 +27,7 @@ impl<'a> System<'a> for DamageSystem {
                 let pos = positions.get(entity);
                 if let Some(pos) = pos {
                     let idx = map.xy_idx(pos.x, pos.y);
-                    map.bloodstains.insert(idx);
+                    if let Some(b) = map.bloodstains.get_mut(idx) {*b = true};
                 }
 
                 if stats.hit_points.current < 1 && dmg.1 {

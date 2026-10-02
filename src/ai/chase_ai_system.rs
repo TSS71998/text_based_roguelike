@@ -1,6 +1,5 @@
 use specs::prelude::*;
 use crate::{MyTurn, Chasing, Position, Map, Viewshed, EntityMoved};
-use rltk::console;
 use std::collections::HashMap;
 use crate::{GAME_TICK};
 use std::sync::atomic::{Ordering};
@@ -8,6 +7,7 @@ use std::sync::atomic::{Ordering};
 pub struct ChaseAI {}
 
 const RESTAGGER:u32= 4;
+const MAX_PATH_STEPS: usize = 15;
 
 impl<'a> System<'a> for ChaseAI {
     #[allow(clippy::type_complexity)]
@@ -46,15 +46,21 @@ impl<'a> System<'a> for ChaseAI {
             (&entities, &mut positions, &chasing, &mut viewsheds, &turns).join()
         {
             if (GAME_TICK.load(Ordering::Relaxed) as u32 + entity.id()) % RESTAGGER == 3 {
-                console::log(format!("A* entity id: {}, tick_count: {}", entity.id(), GAME_TICK.load(Ordering::Relaxed)));
                 turn_done.push(entity);
                 let target_pos = targets[&entity];
+
+                let dist = (target_pos.0 - pos.x).abs().max((target_pos.1 - pos.y).abs());
+                if dist + 1 >= MAX_PATH_STEPS as i32 {
+                    end_chase.push(entity);
+                    continue;
+                }
+
                 let path = rltk::a_star_search(
                     map.xy_idx(pos.x, pos.y),
                     map.xy_idx(target_pos.0, target_pos.1),
                     &mut *map
                 );
-                if path.success && path.steps.len()>1 && path.steps.len()<15 {
+                if path.success && path.steps.len()>1 && path.steps.len()<MAX_PATH_STEPS {
                     let idx = map.xy_idx(pos.x, pos.y);
                     pos.x = path.steps[1] as i32 % map.width;
                     pos.y = path.steps[1] as i32 / map.width;
@@ -62,7 +68,6 @@ impl<'a> System<'a> for ChaseAI {
                     let new_idx = map.xy_idx(pos.x, pos.y);
                     crate::spatial::move_entity(entity, idx, new_idx);
                     viewshed.dirty = true;
-                    turn_done.push(entity);
                 } else {
                     end_chase.push(entity);
                 }

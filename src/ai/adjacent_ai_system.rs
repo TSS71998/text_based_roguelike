@@ -1,7 +1,5 @@
-use std::usize;
-
 use specs::prelude::*;
-use crate::{MyTurn, Faction, Position, Map, raws::Reaction, WantsToMelee};
+use crate::{Faction, Map, MyTurn, Position, WantsToMelee, raws::{RawMaster, Reaction, faction_reaction}};
 
 pub struct AdjacentAI {}
 
@@ -18,22 +16,26 @@ impl<'a> System<'a> for AdjacentAI {
     fn run(&mut self, data: Self::SystemData) {
         let (mut turns, factions, positions, map, mut want_melee, entities, player) = data;
 
+        let raws = crate::raws::RAWS.lock().unwrap();
+        let spatial = crate::spatial::lock();
+
         let mut turn_done: Vec<Entity> = Vec::new();
+        let mut reactions: Vec<(Entity, Reaction)> = Vec::new();
         for (entity, _turn, my_faction, pos) in (&entities, &turns, &factions, &positions).join() {
             if entity != *player {
-                let mut reactions: Vec<(Entity, Reaction)> = Vec::new();
                 let idx = map.xy_idx(pos.x, pos.y);
                 let w = map.width;
                 let h = map.height;
-                if pos.x > 0 {evaluate(idx - 1, &map, &factions, &my_faction.name, &mut reactions);}
-                if pos.x < w - 1 {evaluate(idx + 1, &map, &factions, &my_faction.name, &mut reactions);}
-                if pos.y > 0 {evaluate(idx - w as usize, &map, &factions, &my_faction.name, &mut reactions);}
-                if pos.y < h - 1 {evaluate(idx + w as usize, &map, &factions, &my_faction.name, &mut reactions);}
-                if pos.y > 0 && pos.x > 0{evaluate((idx - w as usize) - 1, &map, &factions, &my_faction.name, &mut reactions);}
-                if pos.y > 0 && pos.x > w - 1{evaluate((idx - w as usize) + 1, &map, &factions, &my_faction.name, &mut reactions);}
-                if pos.y < h - 1 && pos.x > 0{evaluate((idx + w as usize) - 1, &map, &factions, &my_faction.name, &mut reactions);}
-                if pos.y < h - 1 && pos.x > w - 1{evaluate((idx + w as usize) + 1, &map, &factions, &my_faction.name, &mut reactions);}
-
+                let wu = w as usize;
+                let name = &my_faction.name;
+                if pos.x > 0 {evaluate(idx - 1, &spatial, &factions, name, &raws, &mut reactions);}
+                if pos.x < w - 1 {evaluate(idx + 1, &spatial, &factions, name, &raws, &mut reactions);}
+                if pos.y > 0 {evaluate(idx - wu, &spatial, &factions, name, &raws, &mut reactions);}
+                if pos.y < h - 1 {evaluate(idx + wu, &spatial, &factions, name, &raws, &mut reactions);}
+                if pos.y > 0 && pos.x > 0 {evaluate((idx - wu) - 1, &spatial, &factions, name, &raws, &mut reactions);}
+                if pos.y > 0 && pos.x < w - 1 {evaluate((idx - wu) + 1, &spatial, &factions, name, &raws, &mut reactions);}
+                if pos.y < h - 1 && pos.x > 0 {evaluate((idx + wu) - 1, &spatial, &factions, name, &raws, &mut reactions);}
+                if pos.y < h - 1 && pos.x < w - 1 {evaluate((idx + wu) + 1, &spatial, &factions, name, &raws, &mut reactions);}
                 let mut done = false;
                 for reaction in reactions.iter() {
                     if let Reaction::Attack = reaction.1 {
@@ -51,13 +53,20 @@ impl<'a> System<'a> for AdjacentAI {
     }
 }
 
-fn evaluate(idx: usize, _map: &Map, factions: &ReadStorage<Faction>, my_faction: &str, reactions: &mut Vec<(Entity, Reaction)>) {
-    crate::spatial::for_each_tile_content(idx, |other_entity| {
+fn evaluate(
+    idx: usize, 
+    spatial: &crate::spatial::SpatialGuard,
+    factions: &ReadStorage<Faction>, 
+    my_faction: &str, 
+    raws: &RawMaster,
+    reactions: &mut Vec<(Entity, Reaction)>
+) {
+    for other_entity in spatial.content(idx) {
         if let Some(faction) = factions.get(other_entity) {
             reactions.push((
                 other_entity,
-                crate::raws::faction_reaction(my_faction, &faction.name, &crate::raws::RAWS.lock().unwrap())
+                faction_reaction(my_faction, &faction.name, raws)
             ));
         }
-    });
+    };
 }

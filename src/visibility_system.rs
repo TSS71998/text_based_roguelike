@@ -23,10 +23,13 @@ impl<'a> System<'a> for VisibilitySystem {
         let (mut map, entites, mut viewshed, pos, player,
             mut hidden, mut rng, mut log, names, blocks_visibility) = data;
         
+        let tile_count = map.tiles.len();
         map.view_blocked.clear();
+        map.view_blocked.resize(tile_count, false);
+
         for (block_pos, _block) in (&pos, &blocks_visibility).join() {
             let idx = map.xy_idx(block_pos.x, block_pos.y);
-            map.view_blocked.insert(idx);
+            map.view_blocked[idx] = true;
         }
         
         for (ent, viewshed, pos) in (&entites, &mut viewshed, &pos).join() {

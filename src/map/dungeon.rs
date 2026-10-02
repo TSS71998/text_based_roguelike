@@ -20,20 +20,19 @@ impl MasterDungeonMap {
         self.maps.insert(map.depth, map.clone());
     }
 
+    pub fn has_map(&self, depth: i32) -> bool {
+        self.maps.contains_key(&depth)
+    }
+
     pub fn get_map(&self, depth: i32) -> Option<Map> {
-        if self.maps.contains_key(&depth) {
-            let result = self.maps[&depth].clone();
-            Some(result)
-        } else {
-            None
-        }
+        self.maps.get(&depth).cloned()
     }
 }
 
 pub fn level_transition(ecs: &mut World, new_depth: i32, offset: i32) -> Option<Vec<Map>> {
     let dungeon_master = ecs.read_resource::<MasterDungeonMap>();
 
-    if dungeon_master.get_map(new_depth).is_some() {
+    if dungeon_master.has_map(new_depth) {
         std::mem::drop(dungeon_master);
         transition_to_existing_map(ecs, new_depth, offset);
         None

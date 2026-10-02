@@ -1,7 +1,6 @@
 use specs::prelude::*;
 use crate::{MyTurn, WantsToApproach, Position, Map, Viewshed, EntityMoved};
 use crate::{GAME_TICK};
-use rltk::console;
 use std::sync::atomic::{Ordering};
 
 const RESTAGGER:u32= 4;
@@ -28,7 +27,6 @@ impl<'a> System<'a> for ApproachAI {
             (&entities, &mut positions, &want_approach, &mut viewsheds, &turns).join()
         {
             if (GAME_TICK.load(Ordering::Relaxed) as u32 + entity.id()) % RESTAGGER == 3 {
-                console::log(format!("A* entity id: {}, tick_count: {}", entity.id(), GAME_TICK.load(Ordering::Relaxed)));
                 turn_done.push(entity);
                 let path = rltk::a_star_search(
                     map.xy_idx(pos.x, pos.y),

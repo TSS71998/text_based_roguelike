@@ -1,5 +1,5 @@
 use specs::prelude::*;
-use crate::{Chasing, Faction, Map, MyTurn, Position, Viewshed, WantsToApproach, WantsToFlee, raws::Reaction};
+use crate::{Chasing, Faction, Map, MyTurn, Position, Viewshed, WantsToApproach, WantsToFlee, raws::{RawMaster, Reaction, faction_reaction}};
 
 pub struct VisibleAI {}
 
@@ -19,15 +19,20 @@ impl<'a> System<'a> for VisibleAI {
     fn run(&mut self, data: Self::SystemData) {
         let (turns, factions, positions, map, mut want_approach, mut want_flee, entities, player, viewsheds, mut chasing) = data;
 
+        let raws = crate::raws::RAWS.lock().unwrap();
+        let spatial = crate::spatial::lock();
+
+        let mut reactions: Vec<(usize, Reaction, Entity)> = Vec::new();
+        let mut flee: Vec<usize> = Vec::new();
         for (entity, _turn, my_faction, pos, viewshed) in (&entities, &turns, &factions, &positions, &viewsheds).join() {
             if entity != *player {
-                let mut reactions: Vec<(usize, Reaction, Entity)> = Vec::new();
+                reactions.clear();
+                flee.clear();
                 let my_idx = map.xy_idx(pos.x, pos.y);
-                let mut flee: Vec<usize> = Vec::new();
                 for visible_tile in viewshed.visible_tiles.iter() {
                     let idx = map.xy_idx(visible_tile.x, visible_tile.y);
                     if my_idx != idx {
-                        evaluate(idx, &map, &factions, &my_faction.name, &mut reactions);
+                        evaluate(idx, &spatial, &factions, &my_faction.name, &raws, &mut reactions);
                     }
                 }
                 
@@ -47,21 +52,28 @@ impl<'a> System<'a> for VisibleAI {
                     }
                 }
                 if !done && !flee.is_empty() {
-                    want_flee.insert(entity, WantsToFlee { indices: flee }).expect("Unable to insert");
+                    want_flee.insert(entity, WantsToFlee { indices: std::mem::take(&mut flee) }).expect("Unable to insert");
                 }
             }
         }
     }
 }
 
-fn evaluate(idx: usize, _map: &Map, factions: &ReadStorage<Faction>, my_faction: &str, reactions: &mut Vec<(usize, Reaction, Entity)>) {
-    crate::spatial::for_each_tile_content(idx, |other_entity| {
+fn evaluate(
+    idx: usize, 
+    spatial: &crate::spatial::SpatialGuard, 
+    factions: &ReadStorage<Faction>,
+    my_faction: &str, 
+    raws: &RawMaster,
+    reactions: &mut Vec<(usize, Reaction, Entity)>
+) {
+    for other_entity in spatial.content(idx) {
         if let Some(faction) = factions.get(other_entity) {
             reactions.push((
                 idx,
-                crate::raws::faction_reaction(my_faction, &faction.name, &crate::raws::RAWS.lock().unwrap()),
+                faction_reaction(my_faction, &faction.name, raws),
                 other_entity
             ));
         }
-    });
+    }
 }

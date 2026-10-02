@@ -1,4 +1,4 @@
-use rltk::{GameState, Point, Rltk, console};
+use rltk::{GameState, Point, Rltk};
 use specs::{prelude::*};
 use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -170,7 +170,6 @@ impl GameState for State {
                     self.run_systems();
                     self.ecs.maintain();
                     GAME_TICK.fetch_add(1, Ordering::Relaxed);
-                    console::log(format!("tick_count: {}", GAME_TICK.load(Ordering::Relaxed)));
                     match *self.ecs.fetch::<RunState>() {
                         RunState::AwaitingInput => newrunstate = RunState::AwaitingInput,
                         RunState::MagicMapReveal { .. } => newrunstate = RunState::MagicMapReveal { row: 0 },
@@ -306,7 +305,13 @@ impl GameState for State {
             let mut runwriter = self.ecs.write_resource::<RunState>();
             *runwriter = newrunstate;
         }
-        damage_system::delete_the_dead(&mut self.ecs);        
+        damage_system::delete_the_dead(&mut self.ecs);
+
+        let mut log = self.ecs.write_resource::<gamelog::GameLog> ();
+        if log.entries.len() > 200 {
+            let excess = log.entries.len() - 100;
+            log.entries.drain(..excess);
+        }   
     }
 }
 
@@ -362,6 +367,7 @@ fn main() -> rltk::BError {
     use rltk::RltkBuilder;
     let mut context = RltkBuilder::simple(80, 60)
         .unwrap()
+        .with_tile_dimensions(16, 16)
         .with_title("TextBasedRoguelike")
         .build()?;
     context.with_post_scanlines(true);

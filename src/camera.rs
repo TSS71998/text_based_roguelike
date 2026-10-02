@@ -35,16 +35,16 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
     let hidden = ecs.read_storage::<Hidden>();
     let map = ecs.fetch::<Map>();
 
-    let mut data = (&positions, &renderables, !&hidden).join().collect::<Vec<_>>();
+    let mut data = (&positions, &renderables, !&hidden)
+                        .join()
+                        .filter(|(pos, _, _)| map.visible_tiles[map.xy_idx(pos.x, pos.y)])
+                        .collect::<Vec<_>>();
     data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
     for (pos, render, _hidden) in data.iter() {
-        let idx =map.xy_idx(pos.x, pos.y);
-        if map.visible_tiles[idx] {
-            let entity_screen_x = pos.x - min_x;
-            let entity_screen_y = pos.y - min_y;
-            if entity_screen_x > 0 && entity_screen_x < map.width && entity_screen_y > 0 && entity_screen_y < map.height {
-                ctx.set(entity_screen_x, entity_screen_y, render.fg, render.bg, render.glyph);
-            }
+        let entity_screen_x = pos.x - min_x;
+        let entity_screen_y = pos.y - min_y;
+        if entity_screen_x > 0 && entity_screen_x < map.width && entity_screen_y > 0 && entity_screen_y < map.height {
+            ctx.set(entity_screen_x, entity_screen_y, render.fg, render.bg, render.glyph);
         }
     }
 }

@@ -1,4 +1,3 @@
-use rltk::console;
 use specs::prelude::*;
 use crate::{EntityMoved, Map, MoveMode, Movement, MyTurn, Position, Viewshed, tile_walkable};
 use crate::{GAME_TICK};
@@ -76,7 +75,6 @@ impl<'a> System<'a> for DefaultMoveAI {
                         let idx = map.xy_idx(target_x, target_y);
                         if tile_walkable(map.tiles[idx]) {
                             if (GAME_TICK.load(Ordering::Relaxed) as u32 + entity.id()) % RESTAGGER == 3{
-                                console::log(format!("A* entity id: {}, target x: {}, target y: {}, tick_count: {}", entity.id(), target_x, target_y, GAME_TICK.load(Ordering::Relaxed)));
                                 let path = rltk::a_star_search(
                                     map.xy_idx(pos.x, pos.y),
                                     map.xy_idx(target_x, target_y), 

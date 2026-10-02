@@ -1,6 +1,6 @@
 use rltk::{Point, RGB, Rltk, VirtualKeyCode};
 use specs::prelude::*;
-use super::{Pools, gamelog::GameLog, Map, Name, Position, State, InBackpack, Viewshed, 
+use super::{Pools, gamelog::GameLog, Map, Name, State, InBackpack, Viewshed, 
     Equipped, RunState, HungerClock, HungerState, rex_assets::RexAssets, Hidden, camera,
     Attribute, Attributes, Consumable};
 
@@ -98,7 +98,7 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
 
     let log = ecs.fetch::<GameLog>();
     let mut y = 46;
-    for s in log.entries.iter().rev() {
+    for s in log.entries.iter().rev().take(13) {
         if y < 59 {ctx.print(2, y, s);}
         y += 1;
     }
@@ -181,11 +181,9 @@ fn draw_tooltips(ecs: &World, ctx: &mut Rltk) {
     let (min_x, _max_x, min_y, _max_y) = camera::get_screen_bounds(ecs, ctx);
     let map = ecs.fetch::<Map>();
     let names = ecs.read_storage::<Name>();
-    let positions = ecs.read_storage::<Position>();
     let hidden = ecs.read_storage::<Hidden>();
     let attributes = ecs.read_storage::<Attributes>();
     let pools = ecs.read_storage::<Pools>();
-    let entities = ecs.entities();
 
     let mouse_pos = ctx.mouse_pos();
     let mut mouse_map_pos = mouse_pos;
@@ -196,11 +194,17 @@ fn draw_tooltips(ecs: &World, ctx: &mut Rltk) {
         return;
     }
 
-    if !map.visible_tiles[map.xy_idx(mouse_map_pos.0, mouse_map_pos.1)] {return;}
+    let mouse_idx = map.xy_idx(mouse_map_pos.0, mouse_map_pos.1);
+    if !map.visible_tiles[mouse_idx] {return;}
+
+    let mut on_tile: Vec<Entity> = Vec::new();
+    crate::spatial::for_each_tile_content(mouse_idx, |e| on_tile.push(e));
+    on_tile.sort_by_key(|e| e.id());
 
     let mut tip_boxes: Vec<ToolTip> = Vec::new();
-    for (entity, name, position, _hidden) in (&entities, &names, &positions, !&hidden).join() {
-        if position.x == mouse_map_pos.0 && position.y == mouse_map_pos.1 {
+    for entity in on_tile {
+        if hidden.get(entity).is_some() {continue;}
+        if let Some(name) = names.get(entity) {
             let mut tip = ToolTip::new();
             tip.add(name.name.to_string());
 

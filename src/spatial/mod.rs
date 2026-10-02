@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 use specs::prelude::*;
 use crate::{Map, RunState, tile_walkable};
 
@@ -18,6 +18,25 @@ impl SpatialMap {
 
 lazy_static!{
     static ref SPATIAL_MAP: Mutex<SpatialMap> = Mutex::new(SpatialMap::new());
+}
+
+pub struct SpatialGuard (MutexGuard<'static, SpatialMap>);
+
+impl SpatialGuard {
+    #[inline]
+    pub fn is_blocked(&self, idx: usize) -> bool {
+        let b = self.0.blocked[idx];
+        b.0 || b.1
+    }
+
+    #[inline]
+    pub fn content(&self, idx: usize) -> impl Iterator<Item = Entity> + '_ {
+        self.0.tile_content[idx].iter().map(|(e,_)| *e)
+    }
+}
+
+pub fn lock() -> SpatialGuard {
+    SpatialGuard(SPATIAL_MAP.lock().unwrap())
 }
 
 pub fn set_size(map_tile_count: usize) {

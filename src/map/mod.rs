@@ -18,8 +18,8 @@ pub struct Map {
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles: Vec<bool>,
     pub depth: i32,
-    pub bloodstains: HashSet<usize>,
-    pub view_blocked: HashSet<usize>,
+    pub bloodstains: Vec<bool>,
+    pub view_blocked: Vec<bool>,
     pub name: String,
     pub outdoors: bool,
     pub light: Vec<rltk::RGB>
@@ -28,12 +28,6 @@ pub struct Map {
 impl Map{
     pub fn xy_idx(&self,x: i32, y: i32) -> usize {
         (y as usize * self.width as usize) + x as usize
-    }
-
-    fn is_exit_valid(&self, x:i32, y:i32 ) -> bool {
-        if x < 1 || x > self.width - 1 || y < 1 || y > self.height - 1 {return false;}
-        let idx = self.xy_idx(x, y);
-        !crate::spatial::is_blocked(idx)
     }
 
     pub fn populate_blocked(&mut self) {
@@ -54,8 +48,8 @@ impl Map{
             revealed_tiles: vec![false; map_tile_count],
             visible_tiles: vec![false; map_tile_count],
             depth: new_depth,
-            bloodstains: HashSet::new(),
-            view_blocked: HashSet::new(),
+            bloodstains: vec![false; map_tile_count],
+            view_blocked: vec![false; map_tile_count],
             name: name.to_string(),
             outdoors: true, 
             light: vec![rltk::RGB::from_f32(0.0, 0.0, 0.0); map_tile_count]
@@ -72,7 +66,7 @@ impl Algorithm2D for Map {
 impl BaseMap for Map {
     fn is_opaque(&self, idx: usize) -> bool {
         if idx > 0 && idx < self.tiles.len() {
-            tile_opaque(self.tiles[idx]) || self.view_blocked.contains(&idx)
+            tile_opaque(self.tiles[idx]) || self.view_blocked.get(idx).copied().unwrap_or(false)
         } else {
             true
         }
@@ -93,17 +87,23 @@ impl BaseMap for Map {
         let tt = self.tiles[idx as usize];
         let w = self.width  as usize;
 
+        let spatial = crate::spatial::lock();
+        let valid = |nx: i32, ny: i32| -> bool {
+            if nx < 1 || nx > self.width - 1 || ny < 1 || ny > self.height - 1 {return false;}
+            !spatial.is_blocked(self.xy_idx(nx, ny))
+        };
+
         // Cardinal directions
-        if self.is_exit_valid(x-1, y) { exits.push((idx-1, tile_cost(tt))) };
-        if self.is_exit_valid(x+1, y) { exits.push((idx+1, tile_cost(tt))) };
-        if self.is_exit_valid(x, y-1) { exits.push((idx-w, tile_cost(tt))) };
-        if self.is_exit_valid(x, y+1) { exits.push((idx+w, tile_cost(tt))) };
+        if valid(x-1, y) { exits.push((idx-1, tile_cost(tt))) };
+        if valid(x+1, y) { exits.push((idx+1, tile_cost(tt))) };
+        if valid(x, y-1) { exits.push((idx-w, tile_cost(tt))) };
+        if valid(x, y+1) { exits.push((idx+w, tile_cost(tt))) };
 
         // Diagonals
-        if self.is_exit_valid(x-1, y-1) { exits.push(((idx-w)-1, tile_cost(tt) * DIAGONAL_COST)); }
-        if self.is_exit_valid(x+1, y-1) { exits.push(((idx-w)+1, tile_cost(tt) * DIAGONAL_COST)); }
-        if self.is_exit_valid(x-1, y+1) { exits.push(((idx+w)-1, tile_cost(tt) * DIAGONAL_COST)); }
-        if self.is_exit_valid(x+1, y+1) { exits.push(((idx+w)+1, tile_cost(tt) * DIAGONAL_COST)); }
+        if valid(x-1, y-1) { exits.push(((idx-w)-1, tile_cost(tt) * DIAGONAL_COST)); }
+        if valid(x+1, y-1) { exits.push(((idx-w)+1, tile_cost(tt) * DIAGONAL_COST)); }
+        if valid(x-1, y+1) { exits.push(((idx+w)-1, tile_cost(tt) * DIAGONAL_COST)); }
+        if valid(x+1, y+1) { exits.push(((idx+w)+1, tile_cost(tt) * DIAGONAL_COST)); }
 
         exits
     }

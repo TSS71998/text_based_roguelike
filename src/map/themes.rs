@@ -8,7 +8,7 @@ pub fn tile_glyph(idx: usize, map: &Map) -> (rltk::FontCharType, RGB, RGB) {
         _ => get_tile_glyph_default(idx, map)
     };
     
-    if map.bloodstains.contains(&idx) {bg = RGB::from_f32(0.75, 0.0, 0.0);}
+    if map.bloodstains.get(idx).copied().unwrap_or(false) {bg = RGB::from_f32(0.75, 0.0, 0.0);}
     if !map.visible_tiles[idx] {
         fg = fg.to_greyscale();
         bg = RGB::from_f32(0., 0., 0.);
