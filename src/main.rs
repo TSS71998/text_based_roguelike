@@ -1,6 +1,6 @@
 use rltk::{GameState, Point, Rltk};
 use specs::{prelude::*};
-use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
+use specs::saveload::SimpleMarkerAllocator;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 #[macro_use]
@@ -229,9 +229,16 @@ impl GameState for State {
                         match selected {
                             gui::MainMenuSelection::NewGame => newrunstate = RunState::PreRun,
                             gui::MainMenuSelection::LoadGame => {
-                                saveload_system::load_game(&mut self.ecs);
-                                newrunstate = RunState::AwaitingInput;
-                                saveload_system::delete_save();
+                                match saveload_system::load_game(&mut self.ecs) {
+                                    Ok(()) => {
+                                        newrunstate = RunState::AwaitingInput;
+                                        saveload_system::delete_save();
+                                    }
+                                    Err(e) => {
+                                        rltk::console::log(format!("Could not load save: {e}"));
+                                        newrunstate = RunState::MainMenu { menu_selection:gui::MainMenuSelection::LoadGame };
+                                    }
+                                }
                             },
                             gui::MainMenuSelection::Quit => { ::std::process::exit(0);}
                         }
@@ -239,8 +246,13 @@ impl GameState for State {
                 }
             }
             RunState::SaveGame => {
-                saveload_system::save_game(&mut self.ecs);
-                newrunstate = RunState::MainMenu { menu_selection: gui::MainMenuSelection::NewGame }
+                match saveload_system::save_game(&self.ecs) {
+                    Ok(()) => newrunstate = RunState::MainMenu { menu_selection: gui::MainMenuSelection::NewGame },
+                    Err(e) => {
+                        self.ecs.write_resource::<gamelog::GameLog>().entries.push(format!("Save failed: {e}"));
+                        newrunstate = RunState::AwaitingInput;
+                    }
+                }
             }
             RunState::NextLevel => {
                 self.goto_level(1);
@@ -380,65 +392,9 @@ fn main() -> rltk::BError {
         mapgen_timer: 0.0
     };
 
-    gs.ecs.register::<Position>();
-    gs.ecs.register::<Renderable>();
-    gs.ecs.register::<Player>();
-    gs.ecs.register::<Viewshed>();
-    gs.ecs.register::<Monster>();
-    gs.ecs.register::<Name>();
-    gs.ecs.register::<BlocksTile>();
-    gs.ecs.register::<WantsToMelee>();
-    gs.ecs.register::<SufferDamage>();
-    gs.ecs.register::<Item>();
-    gs.ecs.register::<InBackpack>();
-    gs.ecs.register::<WantsToPickupItem>();
-    gs.ecs.register::<WantsToUseItem>();
-    gs.ecs.register::<WantsToDropItem>();
-    gs.ecs.register::<ProvidesHealing>();
-    gs.ecs.register::<Consumable>();
-    gs.ecs.register::<Ranged>();
-    gs.ecs.register::<InflictsDamage>();
-    gs.ecs.register::<AreaEffect>();
-    gs.ecs.register::<Confusion>();
-    gs.ecs.register::<SimpleMarker<SerializeMe>>();
-    gs.ecs.register::<SerializationHelper>();
-    gs.ecs.register::<DMSerializationHelper>();
-    gs.ecs.register::<MapEncoderSerializeHelper>();
-    gs.ecs.register::<Equippable>();
-    gs.ecs.register::<Equipped>();
-    gs.ecs.register::<MeleeWeapon>();
-    gs.ecs.register::<Wearable>();
-    gs.ecs.register::<WantsToRemoveItem>();
-    gs.ecs.register::<ParticleLifetime>();
-    gs.ecs.register::<HungerClock>();
-    gs.ecs.register::<ProvidesFood>();
-    gs.ecs.register::<MagicMapper>();
-    gs.ecs.register::<Hidden>();
-    gs.ecs.register::<EntryTrigger>();
-    gs.ecs.register::<EntityMoved>();
-    gs.ecs.register::<SingleActivation>();
-    gs.ecs.register::<BlocksVisibility>();
-    gs.ecs.register::<Door>();
-    gs.ecs.register::<Bystander>();
-    gs.ecs.register::<Vendor>();
-    gs.ecs.register::<Quips>();
+    saveload_system::register_components(&mut gs.ecs);
+
     gs.ecs.register::<Attribute>();
-    gs.ecs.register::<Attributes>();
-    gs.ecs.register::<Skills>();
-    gs.ecs.register::<Pools>();
-    gs.ecs.register::<NaturalAttackDefense>();
-    gs.ecs.register::<LootTable>();
-    gs.ecs.register::<Herbivore>();
-    gs.ecs.register::<Carnivore>();
-    gs.ecs.register::<OtherLevelPosition>();
-    gs.ecs.register::<LightSource>();
-    gs.ecs.register::<Initiative>();
-    gs.ecs.register::<MyTurn>();
-    gs.ecs.register::<Faction>();
-    gs.ecs.register::<WantsToApproach>();
-    gs.ecs.register::<WantsToFlee>();
-    gs.ecs.register::<MoveMode>();
-    gs.ecs.register::<Chasing>();
     gs.ecs.register::<EquipmentChanged>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());

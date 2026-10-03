@@ -123,21 +123,6 @@ pub struct Confusion {
 
 pub struct SerializeMe;
 
-#[derive(Component, Serialize, Deserialize, Clone)]
-pub struct SerializationHelper {
-    pub map: super::map::Map
-}
-
-#[derive(Component, Serialize, Deserialize, Clone)]
-pub struct DMSerializationHelper {
-    pub map: super::map::MasterDungeonMap
-}
-
-#[derive(Component, Serialize, Deserialize, Clone)]
-pub struct MapEncoderSerializeHelper {
-    pub map_encoded: super::map::MapEncoded
-}
-
 #[derive(PartialEq, Serialize, Deserialize, Clone, Copy)]
 pub enum EquipmentSlot {Melee, Shield, Head, Torso, Legs, Feet, Hands}
 
