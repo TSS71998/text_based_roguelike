@@ -50,7 +50,7 @@ pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
             total_weight: 0.0,
             total_initiative_penalty: 0.0
         })
-        .with(LightSource{color: rltk::RGB::from_f32(1.0, 1.0, 0.5), range: 8})
+        .with(LightSource::flickering(rltk::RGB::from_f32(1.0, 1.0, 0.5), 8, 0.25))
         .with(Initiative{current: 0})
         .with(Faction{name: "Player".to_string()})
         .with(EquipmentChanged{})

@@ -47,5 +47,6 @@ pub struct NaturalAttack {
 #[derive(Deserialize, Debug)]
 pub struct MobLight {
     pub range: i32,
-    pub color: String
+    pub color: String,
+    pub flicker: Option<f32>
 }

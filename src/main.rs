@@ -135,6 +135,7 @@ impl GameState for State {
             RunState::MainMenu { .. } => {}
             RunState::GameOver { .. } => {}
             _ => {
+                lighting_system::animate(&self.ecs, ctx.frame_time_ms);
                 camera::render_camera(&self.ecs, ctx);
                 gui::draw_ui(&self.ecs, ctx);
             }
@@ -410,6 +411,7 @@ fn main() -> rltk::BError {
     gs.ecs.insert(RunState::MapGeneration{});
     gs.ecs.insert(gamelog::GameLog{entries: vec!["Welcome to Text Based Roguelike".to_string()]});
     gs.ecs.insert(particle_system::ParticleBuilder::new());
+    gs.ecs.insert(lighting_system::LightingState::default());
     gs.ecs.insert(rex_assets::RexAssets::new());
 
     gs.generate_world_map(1, 0);

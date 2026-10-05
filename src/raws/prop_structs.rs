@@ -1,5 +1,5 @@
 use serde::{Deserialize};
-use super::{Renderable};
+use super::{Renderable, MobLight};
 use std::collections::HashMap;
 
 #[derive(Deserialize, Debug)]
@@ -10,7 +10,8 @@ pub struct Prop {
     pub block_tile: Option<bool>,
     pub blocks_visibility: Option<bool>,
     pub door_open: Option<bool>,
-    pub entry_trigger: Option<EntryTrigger>
+    pub entry_trigger: Option<EntryTrigger>,
+    pub light: Option<MobLight>
 }
 
 #[derive(Deserialize, Debug)]

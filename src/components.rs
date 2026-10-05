@@ -286,7 +286,20 @@ pub struct OtherLevelPosition {
 #[derive(Component, Serialize, Deserialize, Clone)]
 pub struct LightSource {
     pub color: RGB,
-    pub range: i32
+    pub range: i32,
+
+    #[serde(default)]
+    pub flicker: f32
+}
+
+impl LightSource {
+    pub fn steady(color: RGB, range: i32) -> Self {
+        LightSource { color, range, flicker: 0.0 }
+    }
+
+    pub fn flickering(color: RGB, range: i32, flicker: f32) -> Self {
+        LightSource { color, range, flicker }
+    }
 }
 
 #[derive(Component, Serialize, Deserialize, Clone, Debug)]

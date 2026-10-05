@@ -907,7 +907,8 @@
         "equipped" : [ "Dagger", "Shield", "Leather Armor", "Leather Boots" ],
         "light" : {
             "range" : 6,
-            "color" : "#FFFF55"
+            "color" : "#FFFF55",
+            "flicker" : 0.3
         },
         "faction" : "Bandits",
         "gold" : "1d6"
@@ -1032,7 +1033,8 @@
         },
         "light" : {
             "range" : 4,
-            "color" : "#550000"
+            "color" : "#550000",
+            "flicker" : 0.15
         }
     }
 ],

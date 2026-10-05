@@ -13,8 +13,10 @@ pub fn tile_glyph(idx: usize, map: &Map) -> (rltk::FontCharType, RGB, RGB) {
         fg = fg.to_greyscale();
         bg = RGB::from_f32(0., 0., 0.);
     } else if !map.outdoors {
-        fg = fg * map.light[idx];
-        bg = bg * map.light[idx];
+        let l = map.light[idx];
+        let light = RGB::from_f32(l.r, l.g, l.b);
+        fg = fg * light;
+        bg = bg * light;
     }
 
     (glyph, fg, bg)

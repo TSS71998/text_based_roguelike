@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
 use crate::{attr_bonus, mana_at_level, npc_hp, random_table::RandomTable, raws::faction_structs::Reaction};
-use super::{Raws};
+use super::{Raws, MobLight};
 use crate::components::*;
 use regex::Regex;
 
@@ -213,6 +213,14 @@ pub fn spawn_named_item(raws: &RawMaster, ecs: &mut World, key: &str, pos: Spawn
     None
 }
 
+fn light_component(light: &MobLight) -> LightSource {
+    LightSource::flickering(
+        rltk::RGB::from_hex(&light.color).expect("Bad light color"), 
+        light.range, 
+        light.flicker.unwrap_or(0.0)
+    )
+}
+
 pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnType) -> Option<Entity> {
     if raws.mob_index.contains_key(key) {
         let mob_template = &raws.raws.mobs[raws.mob_index[key]];
@@ -302,7 +310,7 @@ pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnT
         }
 
         if let Some(light) = &mob_template.light {
-            eb = eb.with(LightSource{range: light.range, color: rltk::RGB::from_hex(&light.color).expect("Bad Color")});
+            eb = eb.with(light_component(light));
         }
 
         if let Some(faction) = &mob_template.faction {
@@ -375,6 +383,9 @@ pub fn spawn_named_prop(raws: &RawMaster, ecs: &mut World, key: &str, pos: Spawn
         }
         if let Some(door_open) = prop_template.door_open {
             if door_open {eb = eb.with(Door{open: door_open})};
+        }
+        if let Some(light) = &prop_template.light {
+            eb  = eb.with(light_component(light));
         }
         if let Some(entry_trigger) = &prop_template.entry_trigger {
             eb = eb.with(EntryTrigger{});
