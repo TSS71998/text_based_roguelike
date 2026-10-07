@@ -29,6 +29,7 @@ mod inventory_system;
 use inventory_system::*;
 mod gamesystem;
 pub use gamesystem::*;
+
 pub mod saveload_system;
 pub mod random_table;
 pub mod particle_system;
@@ -40,6 +41,7 @@ pub mod camera;
 pub mod raws;
 pub mod ai;
 pub mod lighting_system;
+pub mod presentation;
 pub mod spatial;
 
 const SHOW_MAPGEN_VISUALIZER: bool = false;
@@ -128,17 +130,14 @@ impl GameState for State {
             newrunstate = *runstate;
         }
 
-        ctx.cls();
+        camera::clear_layers(ctx);
         particle_system::cull_dead_particles(&mut self.ecs, ctx);
+        let started_state = newrunstate;
 
         match newrunstate {
             RunState::MainMenu { .. } => {}
             RunState::GameOver { .. } => {}
-            _ => {
-                lighting_system::animate(&self.ecs, ctx.frame_time_ms);
-                camera::render_camera(&self.ecs, ctx);
-                gui::draw_ui(&self.ecs, ctx);
-            }
+            _ => gui::draw_ui(&self.ecs, ctx)
         }
 
         match newrunstate {
@@ -146,7 +145,7 @@ impl GameState for State {
                 if !SHOW_MAPGEN_VISUALIZER {
                     newrunstate = self.mapgen_next_state.unwrap();
                 }
-                ctx.cls();
+                camera::clear_layers(ctx);
                 if self.mapgen_index < self.mapgen_history.len() {camera::render_debug_map(&self.mapgen_history[self.mapgen_index], ctx);}
 
                 self.mapgen_timer += ctx.frame_time_ms;
@@ -164,6 +163,8 @@ impl GameState for State {
                 newrunstate = RunState::AwaitingInput;
             }
             RunState::AwaitingInput => {
+                let ready = self.ecs.fetch::<presentation::Presentation>().input_ready();
+                ctx.key = self.ecs.write_resource::<presentation::Presentation>().filter_key(ctx.key, ready);
                 newrunstate = player_input(self, ctx);
             }
             RunState::Ticking => {
@@ -232,6 +233,7 @@ impl GameState for State {
                             gui::MainMenuSelection::LoadGame => {
                                 match saveload_system::load_game(&mut self.ecs) {
                                     Ok(()) => {
+                                        self.ecs.write_resource::<presentation::Presentation>().reset();
                                         newrunstate = RunState::AwaitingInput;
                                         saveload_system::delete_save();
                                     }
@@ -320,6 +322,18 @@ impl GameState for State {
         }
         damage_system::delete_the_dead(&mut self.ecs);
 
+        {
+            let mut presentation = self.ecs.write_resource::<presentation::Presentation>();
+            presentation.observe(&self.ecs);
+            presentation.update(ctx.frame_time_ms / 1000.0);
+        }
+        let shows_world = |s: &RunState| !matches!(s, RunState::MainMenu { .. } | RunState::GameOver { .. } | RunState::MapGeneration);
+        if shows_world(&started_state) && shows_world(&newrunstate) {
+            lighting_system::animate(&self.ecs, ctx.frame_time_ms);
+            camera::render_camera(&self.ecs, ctx);
+        }
+        
+
         let mut log = self.ecs.write_resource::<gamelog::GameLog> ();
         if log.entries.len() > 200 {
             let excess = log.entries.len() - 100;
@@ -340,6 +354,7 @@ impl State {
     }
 
     fn game_over_cleanup(&mut self) {
+        self.ecs.write_resource::<presentation::Presentation>().reset();
         let mut to_delete = Vec::new();
         for e in self.ecs.entities().join() {
             to_delete.push(e);
@@ -382,6 +397,8 @@ fn main() -> rltk::BError {
         .unwrap()
         .with_tile_dimensions(16, 16)
         .with_title("TextBasedRoguelike")
+        .with_fancy_console(80, 60, "terminal8x8.png")
+        .with_sparse_console(80, 60, "terminal8x8.png")
         .build()?;
     context.with_post_scanlines(true);
 
@@ -412,6 +429,8 @@ fn main() -> rltk::BError {
     gs.ecs.insert(gamelog::GameLog{entries: vec!["Welcome to Text Based Roguelike".to_string()]});
     gs.ecs.insert(particle_system::ParticleBuilder::new());
     gs.ecs.insert(lighting_system::LightingState::default());
+    gs.ecs.insert(presentation::Events::default());
+    gs.ecs.insert(presentation::Presentation::default());
     gs.ecs.insert(rex_assets::RexAssets::new());
 
     gs.generate_world_map(1, 0);

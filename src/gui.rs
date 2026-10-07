@@ -421,7 +421,7 @@ pub fn ranged_target(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuRes
                 let screen_x = idx.x - min_x;
                 let screen_y = idx.y - min_y;
                 if screen_x > 1 && screen_x < (max_x - min_x) - 1 && screen_y > 1 && screen_y < (max_y - min_y) - 1{
-                    ctx.set_bg(screen_x, screen_y, RGB::named(rltk::BLUE));
+                    camera::map_set_bg(ctx, screen_x, screen_y, RGB::named(rltk::BLUE));
                     available_cells.push(idx);
                 }
             }
@@ -441,12 +441,12 @@ pub fn ranged_target(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuRes
         }
     }
     if valid_target {
-        ctx.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(rltk::CYAN));
+        camera::map_set_bg(ctx, mouse_pos.0, mouse_pos.1, RGB::named(rltk::CYAN));
         if ctx.left_click {
             return (ItemMenuResult::Selected, Some(Point::new(mouse_map_pos.0, mouse_map_pos.1)));
         }
     } else {
-        ctx.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(rltk::RED));
+        camera::map_set_bg(ctx, mouse_pos.0, mouse_pos.1, RGB::named(rltk::RED));
         if ctx.left_click {
             return (ItemMenuResult::Cancel, None);
         }

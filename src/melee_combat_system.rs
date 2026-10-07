@@ -1,5 +1,5 @@
 use specs::prelude::*;
-use super::{Attributes, WantsToMelee, Name, SufferDamage, gamelog::GameLog, particle_system::ParticleBuilder, 
+use super::{presentation::{Events, GameEvent}, Attributes, WantsToMelee, Name, SufferDamage, gamelog::GameLog, particle_system::ParticleBuilder, 
             Position, HungerClock, HungerState, Skills, Pools, skill_bonus, Skill, Equipped, MeleeWeapon, WeaponAttribute,
             EquipmentSlot, Wearable, NaturalAttackDefense};
 
@@ -22,12 +22,13 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         ReadStorage<'a, MeleeWeapon>,
                         ReadStorage<'a, Wearable>,
                         ReadStorage<'a, NaturalAttackDefense>,
-                        ReadExpect<'a, Entity>
+                        ReadExpect<'a, Entity>,
+                        WriteExpect<'a, Events>
                     );
 
     fn run(&mut self, data: Self::SystemData) {
         let (entities, mut log, mut wants_melee, names, attributes, skills, mut inflict_damage, 
-            mut particle_builder, positions, hunger_clocks, pools, mut rng, equipped_items, meleeweapons, wearables, natural, player_entity) = data;
+            mut particle_builder, positions, hunger_clocks, pools, mut rng, equipped_items, meleeweapons, wearables, natural, player_entity, mut events) = data;
 
         for (entity, wants_melee, name, attacker_attributes, attacker_skills, attacker_pools) in (&entities, &wants_melee, &names, &attributes, &skills, &pools).join() {
             let target_pools = pools.get(wants_melee.target).unwrap();
@@ -99,6 +100,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     let damage = i32::max(0, base_damage + attr_damage_bonus + skill_hit_bonus + skill_damage_bonus + weapon_damage_bonus);
                     SufferDamage::new_damage(&mut inflict_damage, wants_melee.target, damage, entity == *player_entity);
                     log.entries.push(format!("{} hits {}, for {} hp.", &name.name, &target_name.name, damage));
+                    events.push(GameEvent::Attack { attacker: entity, target: wants_melee.target, damage: Some(damage) });
                     if let Some(pos) = positions.get(wants_melee.target) {
                         particle_builder.requests(pos.x, pos.y, rltk::RGB::named(rltk::ORANGE), rltk::RGB::named(rltk::BLACK), rltk::to_cp437('‼'), 200.0);
                     }
@@ -109,6 +111,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     }
                 } else {
                     log.entries.push(format!("{} attacks {}, but misses", &name.name, &target_name.name));
+                    events.push(GameEvent::Attack { attacker: entity, target: wants_melee.target, damage: None });
                     if let Some(pos) = positions.get(wants_melee.target) {
                         particle_builder.requests(pos.x, pos.y, rltk::RGB::named(rltk::ORANGE), rltk::RGB::named(rltk::BLACK), rltk::to_cp437('‼'), 200.0);
                     }
