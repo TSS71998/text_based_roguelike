@@ -160,7 +160,7 @@ impl<'a> ByteReader<'a> {
 
     pub fn varint_i(&mut self) -> DecodeResult<i64> {
         let v = self.varint()?;
-        Ok(((v >> 1) as i64) ^ ((v & 1) as i64))
+        Ok(((v >> 1) as i64) ^ -((v & 1) as i64))
     }
 
     pub fn usize(&mut self) -> DecodeResult<usize> {

@@ -5,8 +5,7 @@ use specs_derive::*;
 use rltk::{RGB};
 use serde::{Serialize, Deserialize};
 use specs::saveload::{Marker, ConvertSaveload};
-#[warn(deprecated)]
-use specs::error::NoError;
+use std::convert::Infallible as NoError;
 
 #[derive(Component, ConvertSaveload, Clone)]
 pub struct Position{

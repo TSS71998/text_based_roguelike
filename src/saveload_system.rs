@@ -111,6 +111,7 @@ pub fn save_game_to(ecs: &World, path: impl AsRef<Path>) -> Result<(), SaveError
 }
 
 fn encode_save(ecs: &World) -> Result<Vec<u8>, SaveError> {
+    drop_dangling_references(ecs);
     let mut w = ByteWriter::with_capacity(64 * 1024);
     {
         let map = ecs.fetch::<Map>();
@@ -137,6 +138,35 @@ fn encode_save(ecs: &World) -> Result<Vec<u8>, SaveError> {
     out.extend_from_slice(&payload_len.to_le_bytes());
     out.extend_from_slice(&body);
     Ok(out)
+}
+
+fn drop_dangling_references(ecs: &World) {
+    let entities = ecs.entities();
+    let markers = ecs.read_storage::<SimpleMarker<SerializeMe>>();
+    let valid = |e: Entity| markers.get(e).is_some();
+
+    macro_rules! prune {
+        ($ty:ident: $($field:ident),+) => {{
+            let mut storage = ecs.write_storage::<$ty>();
+            let stale: Vec<Entity> = (&entities, &storage).join()
+                .filter(|(_, c)| !($(valid(c.$field))&&+))
+                .map(|(e, _)| e)
+                .collect();
+            for e in stale {
+                rltk::console::log(format!("save: dropping {} on {:?} (refers to a deleted entity)", stringify!($ty), e));
+                storage.remove(e);
+            }
+        }};
+    }
+
+    prune!(WantsToMelee: target);
+    prune!(Chasing: target);
+    prune!(InBackpack: owner);
+    prune!(Equipped: owner);
+    prune!(WantsToPickupItem: collected_by, item);
+    prune!(WantsToUseItem: item);
+    prune!(WantsToDropItem: item);
+    prune!(WantsToRemoveItem: item);
 }
 
 pub fn load_game_from(ecs: &mut World, path: impl AsRef<Path>) -> Result<(), SaveError> {
@@ -288,7 +318,7 @@ savable_components!(
 mod tests {
     use super::*;
     use crate::{gamelog, lighting_system, map, particle_system, raws, rex_assets, spawner};
-    use specs::saveload::Marker;
+    use specs::saveload::{Marker, MarkedBuilder};
     use std::time::Instant;
 
     /// Map generation uses the global spatial index, so these tests can't run in parallel.
@@ -433,5 +463,35 @@ mod tests {
             assert_eq!(dst.entities().join().count(), before);
         }
         fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn save_survives_references_to_deleted_entities() {
+        let _guard = serial();
+        let mut ecs = played_world();
+        let player = *ecs.fetch::<Entity>();
+        let victim = ecs.create_entity().marked::<SimpleMarker<SerializeMe>>().build();
+        let item = ecs.create_entity().marked::<SimpleMarker<SerializeMe>>()
+            .with(Name { name: "Lost Item".to_string() }).build();
+        let chaser = ecs.create_entity().marked::<SimpleMarker<SerializeMe>>()
+            .with(Chasing { target: victim })
+            .with(WantsToMelee { target: victim })
+            .build();
+        ecs.write_storage::<InBackpack>().insert(item, InBackpack { owner: victim }).unwrap();
+        ecs.write_storage::<WantsToUseItem>().insert(player, WantsToUseItem { item: victim, target: None }).unwrap();
+        ecs.delete_entity(victim).unwrap();
+
+        let bytes = encode_save(&ecs).unwrap();
+        assert!(ecs.read_storage::<Chasing>().get(chaser).is_none());
+        assert!(ecs.read_storage::<WantsToMelee>().get(chaser).is_none());
+        assert!(ecs.read_storage::<WantsToUseItem>().get(player).is_none());
+        assert!(ecs.entities().is_alive(chaser));
+
+        let path = std::env::temp_dir().join(format!("rl_dangling_{}.sav", std::process::id()));
+        fs::write(&path, &bytes).unwrap();
+        let mut dst = played_world();
+        load_game_from(&mut dst, &path).unwrap();
+        encode_save(&dst).unwrap();
+        fs::remove_file(&path).ok();
     }
 }
