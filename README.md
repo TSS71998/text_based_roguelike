@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  <a href="https://tss71998.github.io/text_based_roguelike/"><strong>▶ Play in your browser</strong></a>
+</p>
+
+<p align="center">
   <a href="#about">About</a> •
   <a href="#getting-started">Getting Started</a> •
   <a href="#gameplay">Gameplay</a> •
@@ -58,6 +62,27 @@ cargo build --release
 ## Gameplay
 
 Movement and actions use standard roguelike keybindings (arrow keys / numpad or vi-keys, depending on build configuration). Explore the dungeon, fight monsters, and try to survive as deep as you can — permadeath applies, as is roguelike tradition.
+
+### Play in the Browser
+
+The game is built to WebAssembly and published to GitHub Pages on every push to `master`:
+**[tss71998.github.io/text_based_roguelike](https://tss71998.github.io/text_based_roguelike/)**. It needs a browser with WebGL2 (any current Chrome, Firefox, Edge or Safari). Saving isn't available in the web version yet.
+
+To build the web version locally:
+
+```bash
+rustup target add wasm32-unknown-unknown
+# The CLI version must match the wasm-bindgen version in Cargo.lock
+cargo install wasm-bindgen-cli --version 0.2.126
+
+cargo build --release --target wasm32-unknown-unknown
+wasm-bindgen target/wasm32-unknown-unknown/release/text_based_roguelike_project.wasm \
+  --out-dir dist --target web --no-typescript
+cp web/index.html dist/
+
+# Serve it (browsers won't load wasm from file://), then open http://localhost:8000
+python3 -m http.server --directory dist 8000
+```
 
 ## Roadmap
 

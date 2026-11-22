@@ -243,7 +243,10 @@ impl GameState for State {
                                     }
                                 }
                             },
-                            gui::MainMenuSelection::Quit => { ::std::process::exit(0);}
+                            gui::MainMenuSelection::Quit => {
+                                #[cfg(not(target_arch = "wasm32"))]
+                                ::std::process::exit(0);
+                            }
                         }
                     }
                 }
@@ -388,6 +391,7 @@ impl State {
 }
 
 fn main() -> rltk::BError {
+    #[cfg(not(target_arch = "wasm32"))]
     unsafe {
         std::env::set_var("WINIT_UNIX_BACKEND", "x11");
     }

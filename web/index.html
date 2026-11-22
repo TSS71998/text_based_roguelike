@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Text Based Roguelike</title>
+  <link rel="icon" href="data:,">
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* The game sizes the canvas itself (80x60 tiles of 16px = 1280x960). It is shrunk with a
+       transform rather than CSS width/height: mouse input uses offsetX/offsetY, which stay in
+       the canvas's own pixel space under a transform but not under a CSS resize. */
+    #canvas {
+      flex: none;
+      image-rendering: pixelated;
+      transform-origin: center center;
+      outline: none;
+    }
+    #status {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ccc;
+      font: 16px monospace;
+      text-align: center;
+      padding: 1em;
+    }
+    #status:empty { display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" tabindex="0"></canvas>
+  <div id="status">Loading…</div>
+
+  <script type="module">
+    import init from "./text_based_roguelike_project.js";
+
+    const canvas = document.getElementById("canvas");
+    const status = document.getElementById("status");
+
+    function fit() {
+      if (!canvas.width || !canvas.height) return;
+      status.textContent = ""; // the game has sized its canvas, so it's running
+      const scale = Math.min(window.innerWidth / canvas.width, window.innerHeight / canvas.height, 1);
+      canvas.style.transform = `scale(${scale})`;
+      // A transform doesn't change layout size; shrink the box so nothing overflows.
+      canvas.style.margin = `${(canvas.height * (scale - 1)) / 2}px ${(canvas.width * (scale - 1)) / 2}px`;
+    }
+    window.addEventListener("resize", fit);
+    new MutationObserver(fit).observe(canvas, { attributes: true, attributeFilter: ["width", "height"] });
+
+    // Keep arrow keys, space, etc. from scrolling the page while playing.
+    window.addEventListener("keydown", (e) => {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "PageUp", "PageDown", "Home", "End", "Tab"].includes(e.key)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    try {
+      // Runs the game's main(), which starts the render loop on requestAnimationFrame.
+      await init();
+      canvas.focus();
+    } catch (err) {
+      status.textContent = "The game failed to start (" + err + "). It needs a browser with WebGL2.";
+      console.error(err);
+    }
+  </script>
+</body>
+</html>

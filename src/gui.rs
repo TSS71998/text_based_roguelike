@@ -496,6 +496,8 @@ pub fn show_cheat_mode(_gs: &mut State, ctx: &mut Rltk) -> CheatMenuResult {
     }
 }
 
+const QUIT_AVAILABLE: bool = !cfg!(target_arch = "wasm32");
+
 pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
     let runstate = gs.ecs.fetch::<RunState>();
     let save_exists = super::saveload_system::does_save_exist();
@@ -525,17 +527,22 @@ pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
             y += 1;
         }
 
-        if selection == MainMenuSelection::Quit {
-            ctx.print_color_centered( y, RGB::named(rltk::MAGENTA), RGB::named(rltk::BLACK), "Quit");
-        } else {
-            ctx.print_color_centered( y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), "Quit");
+        if QUIT_AVAILABLE {
+            if selection == MainMenuSelection::Quit {
+                ctx.print_color_centered( y, RGB::named(rltk::MAGENTA), RGB::named(rltk::BLACK), "Quit");
+            } else {
+                ctx.print_color_centered( y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), "Quit");
+            }
         }
 
         match ctx.key {
             None => return MainMenuResult::NoSelection { selected: selection },
             Some(key) => {
                 match key {
-                    VirtualKeyCode::Escape => {return MainMenuResult::NoSelection { selected: MainMenuSelection::Quit }}
+                    VirtualKeyCode::Escape => {
+                        let selected = if QUIT_AVAILABLE { MainMenuSelection::Quit } else { selection };
+                        return MainMenuResult::NoSelection { selected }
+                    }
                     VirtualKeyCode::Up => {
                         let mut newselection;
                         match selection {
@@ -545,6 +552,9 @@ pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
                         }
                         if newselection == MainMenuSelection::LoadGame && !save_exists {
                             newselection = MainMenuSelection::NewGame;
+                        }
+                        if newselection == MainMenuSelection::Quit && !QUIT_AVAILABLE {
+                            newselection = if save_exists { MainMenuSelection::LoadGame } else { MainMenuSelection::NewGame };
                         }
                         return MainMenuResult::NoSelection { selected: newselection }
                     }
@@ -557,6 +567,9 @@ pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
                         }
                         if newselection == MainMenuSelection::LoadGame && !save_exists {
                             newselection = MainMenuSelection::Quit;
+                        }
+                        if newselection == MainMenuSelection::Quit && !QUIT_AVAILABLE {
+                            newselection = MainMenuSelection::NewGame;
                         }
                         return MainMenuResult::NoSelection { selected: newselection }
                     }

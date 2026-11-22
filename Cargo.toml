@@ -35,3 +35,16 @@ opt-level = 1
 # Dependencies (rltk, specs, rayon, serde) are the hot code; optimize them even in dev builds.
 [profile.dev.package."*"]
 opt-level = 3
+
+[patch.crates-io]
+rltk = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
+bracket-lib = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
+bracket-terminal = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
+bracket-color = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
+bracket-geometry = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
+bracket-random = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
+bracket-noise = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
+bracket-pathfinding = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
+bracket-algorithm-traits = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
+bracket-embedding = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
+bracket-rex = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
