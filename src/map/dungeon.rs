@@ -27,6 +27,16 @@ impl MasterDungeonMap {
     pub fn get_map(&self, depth: i32) -> Option<Map> {
         self.maps.get(&depth).cloned()
     }
+
+    pub fn maps_by_depth(&self) -> Vec<&Map> {
+        let mut maps: Vec<&Map> = self.maps.values().collect();
+        maps.sort_by_key(|m| m.depth);
+        maps
+    }
+
+    pub fn from_maps(maps: impl IntoIterator<Item = Map>) -> MasterDungeonMap {
+        MasterDungeonMap { maps: maps.into_iter().map(|m| (m.depth, m)).collect() }
+    }
 }
 
 pub fn level_transition(ecs: &mut World, new_depth: i32, offset: i32) -> Option<Vec<Map>> {

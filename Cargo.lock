@@ -1916,6 +1916,7 @@ dependencies = [
  "bincode",
  "bitvec",
  "lazy_static",
+ "miniz_oxide",
  "regex",
  "rltk",
  "serde",
