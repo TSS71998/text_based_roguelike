@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 #[macro_use]
 extern crate lazy_static;
 
+pub mod engine;
 mod map;
 pub use map::*;
 mod components;
