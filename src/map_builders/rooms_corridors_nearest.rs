@@ -1,10 +1,14 @@
-use super::{MetaMapBuilder, BuilderMap, Rect, draw_corridor};
+use super::{BuilderMap, MetaMapBuilder, Rect, draw_corridor};
 use std::collections::HashSet;
 pub struct NearestCorridors {}
 
 impl MetaMapBuilder for NearestCorridors {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.corridors(rng, build_data);
     }
 }
@@ -12,10 +16,14 @@ impl MetaMapBuilder for NearestCorridors {
 impl NearestCorridors {
     #[allow(dead_code)]
     pub fn new() -> Box<NearestCorridors> {
-        Box::new(NearestCorridors{})
+        Box::new(NearestCorridors {})
     }
 
-    fn corridors(&mut self, _rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn corridors(
+        &mut self,
+        _rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         let rooms: Vec<Rect>;
         if let Some(rooms_builder) = &build_data.rooms {
             rooms = rooms_builder.clone();
@@ -33,7 +41,8 @@ impl NearestCorridors {
                 if i != j && !connected.contains(&j) {
                     let other_center = other_room.center();
                     let other_center_pt = crate::engine::Point::new(other_center.0, other_center.1);
-                    let distance = crate::engine::DistanceAlg::Pythagoras.distance2d(room_center_pt, other_center_pt);
+                    let distance = crate::engine::DistanceAlg::Pythagoras
+                        .distance2d(room_center_pt, other_center_pt);
                     room_distance.push((j, distance));
                 }
             }
@@ -41,7 +50,13 @@ impl NearestCorridors {
             if !room_distance.is_empty() {
                 room_distance.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
                 let dest_center = rooms[room_distance[0].0].center();
-                let corridor = draw_corridor(&mut build_data.map, room_center.0, room_center.1, dest_center.0, dest_center.1);
+                let corridor = draw_corridor(
+                    &mut build_data.map,
+                    room_center.0,
+                    room_center.1,
+                    dest_center.0,
+                    dest_center.1,
+                );
                 corridors.push(corridor);
                 connected.insert(i);
                 build_data.take_snapshot();

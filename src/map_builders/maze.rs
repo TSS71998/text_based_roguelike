@@ -1,11 +1,15 @@
-use super::{Map,  InitialMapBuilder, BuilderMap, TileType};
+use super::{BuilderMap, InitialMapBuilder, Map, TileType};
 use crate::engine::RandomNumberGenerator;
 
 pub struct MazeBuilder {}
 
 impl InitialMapBuilder for MazeBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data : &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.build(rng, build_data);
     }
 }
@@ -13,21 +17,25 @@ impl InitialMapBuilder for MazeBuilder {
 impl MazeBuilder {
     #[allow(dead_code)]
     pub fn new() -> Box<MazeBuilder> {
-        Box::new(MazeBuilder{})
+        Box::new(MazeBuilder {})
     }
 
     #[allow(clippy::map_entry)]
-    fn build(&mut self, rng : &mut RandomNumberGenerator, build_data : &mut BuilderMap) {
+    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         // Maze gen
-        let mut maze = Grid::new((build_data.map.width / 2)-2, (build_data.map.height / 2)-2, rng);
+        let mut maze = Grid::new(
+            (build_data.map.width / 2) - 2,
+            (build_data.map.height / 2) - 2,
+            rng,
+        );
         maze.generate_maze(build_data);
     }
 }
 
-const TOP : usize = 0;
-const RIGHT : usize = 1;
-const BOTTOM : usize = 2;
-const LEFT : usize = 3;
+const TOP: usize = 0;
+const RIGHT: usize = 1;
+const BOTTOM: usize = 2;
+const LEFT: usize = 3;
 
 #[derive(Copy, Clone)]
 struct Cell {
@@ -39,31 +47,28 @@ struct Cell {
 
 impl Cell {
     fn new(row: i32, column: i32) -> Cell {
-        Cell{
+        Cell {
             row,
             column,
             walls: [true, true, true, true],
-            visited: false
+            visited: false,
         }
     }
 
-    fn remove_walls(&mut self, next : &mut Cell) {
+    fn remove_walls(&mut self, next: &mut Cell) {
         let x = self.column - next.column;
         let y = self.row - next.row;
 
         if x == 1 {
             self.walls[LEFT] = false;
             next.walls[RIGHT] = false;
-        }
-        else if x == -1 {
+        } else if x == -1 {
             self.walls[RIGHT] = false;
             next.walls[LEFT] = false;
-        }
-        else if y == 1 {
+        } else if y == 1 {
             self.walls[TOP] = false;
             next.walls[BOTTOM] = false;
-        }
-        else if y == -1 {
+        } else if y == -1 {
             self.walls[BOTTOM] = false;
             next.walls[TOP] = false;
         }
@@ -76,18 +81,18 @@ struct Grid<'a> {
     cells: Vec<Cell>,
     backtrace: Vec<usize>,
     current: usize,
-    rng : &'a mut RandomNumberGenerator
+    rng: &'a mut RandomNumberGenerator,
 }
 
 impl<'a> Grid<'a> {
-    fn new(width: i32, height:i32, rng: &mut RandomNumberGenerator) -> Grid<'_> {
-        let mut grid = Grid{
+    fn new(width: i32, height: i32, rng: &mut RandomNumberGenerator) -> Grid<'_> {
+        let mut grid = Grid {
             width,
             height,
             cells: Vec::new(),
             backtrace: Vec::new(),
             current: 0,
-            rng
+            rng,
         };
 
         for row in 0..height {
@@ -100,7 +105,7 @@ impl<'a> Grid<'a> {
     }
 
     fn calculate_index(&self, row: i32, column: i32) -> i32 {
-        if row < 0 || column < 0 || column > self.width-1 || row > self.height-1 {
+        if row < 0 || column < 0 || column > self.width - 1 || row > self.height - 1 {
             -1
         } else {
             column + (row * self.width)
@@ -108,16 +113,16 @@ impl<'a> Grid<'a> {
     }
 
     fn get_available_neighbors(&self) -> Vec<usize> {
-        let mut neighbors : Vec<usize> = Vec::new();
+        let mut neighbors: Vec<usize> = Vec::new();
 
         let current_row = self.cells[self.current].row;
         let current_column = self.cells[self.current].column;
 
-        let neighbor_indices : [i32; 4] = [
-            self.calculate_index(current_row -1, current_column),
+        let neighbor_indices: [i32; 4] = [
+            self.calculate_index(current_row - 1, current_column),
             self.calculate_index(current_row, current_column + 1),
             self.calculate_index(current_row + 1, current_column),
-            self.calculate_index(current_row, current_column - 1)
+            self.calculate_index(current_row, current_column - 1),
         ];
 
         for i in neighbor_indices.iter() {
@@ -135,13 +140,15 @@ impl<'a> Grid<'a> {
             if neighbors.len() == 1 {
                 return Some(neighbors[0]);
             } else {
-                return Some(neighbors[(self.rng.roll_dice(1, neighbors.len() as i32)-1) as usize]);
+                return Some(
+                    neighbors[(self.rng.roll_dice(1, neighbors.len() as i32) - 1) as usize],
+                );
             }
         }
         None
     }
 
-    fn generate_maze(&mut self, build_data : &mut BuilderMap) {
+    fn generate_maze(&mut self, build_data: &mut BuilderMap) {
         let mut i = 0;
         loop {
             self.cells[self.current].visited = true;
@@ -179,9 +186,11 @@ impl<'a> Grid<'a> {
         }
     }
 
-    fn copy_to_map(&self, map : &mut Map) {
+    fn copy_to_map(&self, map: &mut Map) {
         // Clear the map
-        for i in map.tiles.iter_mut() { *i = TileType::Wall; }
+        for i in map.tiles.iter_mut() {
+            *i = TileType::Wall;
+        }
 
         for cell in self.cells.iter() {
             let x = cell.column + 1;
@@ -189,10 +198,18 @@ impl<'a> Grid<'a> {
             let idx = map.xy_idx(x * 2, y * 2);
 
             map.tiles[idx] = TileType::Floor;
-            if !cell.walls[TOP] { map.tiles[idx - map.width as usize] = TileType::Floor }
-            if !cell.walls[RIGHT] { map.tiles[idx + 1] = TileType::Floor }
-            if !cell.walls[BOTTOM] { map.tiles[idx + map.width as usize] = TileType::Floor }
-            if !cell.walls[LEFT] { map.tiles[idx - 1] = TileType::Floor }
+            if !cell.walls[TOP] {
+                map.tiles[idx - map.width as usize] = TileType::Floor
+            }
+            if !cell.walls[RIGHT] {
+                map.tiles[idx + 1] = TileType::Floor
+            }
+            if !cell.walls[BOTTOM] {
+                map.tiles[idx + map.width as usize] = TileType::Floor
+            }
+            if !cell.walls[LEFT] {
+                map.tiles[idx - 1] = TileType::Floor
+            }
         }
     }
 }

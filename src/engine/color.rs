@@ -46,11 +46,15 @@ impl std::error::Error for HexParseError {}
 
 impl RGB {
     pub const fn from_f32(r: f32, g: f32, b: f32) -> RGB {
-        RGB { r, g, b}
+        RGB { r, g, b }
     }
 
     pub fn from_u8(r: u8, g: u8, b: u8) -> RGB {
-        RGB { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0 }
+        RGB {
+            r: r as f32 / 255.0,
+            g: g as f32 / 255.0,
+            b: b as f32 / 255.0,
+        }
     }
 
     pub fn named(c: ColorU8) -> RGB {
@@ -80,7 +84,12 @@ impl RGB {
     }
 
     pub fn to_rgba(&self, a: f32) -> RGBA {
-        RGBA { r: self.r, g: self.g, b: self.b, a }
+        RGBA {
+            r: self.r,
+            g: self.g,
+            b: self.b,
+            a,
+        }
     }
 }
 
@@ -94,7 +103,11 @@ impl RGBA {
     }
 
     pub fn to_rgb(&self) -> RGB {
-        RGB { r: self.r, g: self.r, b: self.b }
+        RGB {
+            r: self.r,
+            g: self.g,
+            b: self.b,
+        }
     }
 }
 
@@ -119,7 +132,11 @@ impl From<ColorU8> for RGB {
 impl Add for RGB {
     type Output = RGB;
     fn add(self, o: RGB) -> RGB {
-        RGB { r: self.r + o.r, g: self.g + o.g, b: self.b + o.b }
+        RGB {
+            r: self.r + o.r,
+            g: self.g + o.g,
+            b: self.b + o.b,
+        }
     }
 }
 
@@ -132,21 +149,33 @@ impl AddAssign for RGB {
 impl Sub for RGB {
     type Output = RGB;
     fn sub(self, o: RGB) -> RGB {
-        RGB { r: self.r - o.r, g: self.g - o.g, b: self.b - o.b }
+        RGB {
+            r: self.r - o.r,
+            g: self.g - o.g,
+            b: self.b - o.b,
+        }
     }
 }
 
 impl Mul for RGB {
     type Output = RGB;
     fn mul(self, o: RGB) -> RGB {
-        RGB { r: self.r * o.r, g: self.g * o.g, b: self.b * o.b }
+        RGB {
+            r: self.r * o.r,
+            g: self.g * o.g,
+            b: self.b * o.b,
+        }
     }
 }
 
 impl Mul<f32> for RGB {
     type Output = RGB;
     fn mul(self, s: f32) -> RGB {
-        RGB { r: self.r * s, g: self.g * s, b: self.b * s }
+        RGB {
+            r: self.r * s,
+            g: self.g * s,
+            b: self.b * s,
+        }
     }
 }
 
@@ -159,7 +188,7 @@ impl MulAssign<f32> for RGB {
 #[cfg(test)]
 mod tests {
     use super::*;
- 
+
     #[test]
     fn hex_parses() {
         assert_eq!(RGB::from_hex("#ff8000").unwrap(), RGB::from_u8(255, 128, 0));

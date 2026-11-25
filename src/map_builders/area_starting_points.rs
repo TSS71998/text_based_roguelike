@@ -1,19 +1,31 @@
+use super::{BuilderMap, MetaMapBuilder, Position};
 use crate::map;
-use super::{MetaMapBuilder, BuilderMap, Position};
 
 #[allow(dead_code)]
-pub enum XStart {LEFT, CENTER, RIGHT}
+pub enum XStart {
+    LEFT,
+    CENTER,
+    RIGHT,
+}
 
 #[allow(dead_code)]
-pub enum YStart {TOP, CENTER, BOTTOM}
+pub enum YStart {
+    TOP,
+    CENTER,
+    BOTTOM,
+}
 
 pub struct AreaStartingPosition {
     x: XStart,
-    y: YStart
+    y: YStart,
 }
 
 impl MetaMapBuilder for AreaStartingPosition {
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.build(rng, build_data);
     }
 }
@@ -21,39 +33,42 @@ impl MetaMapBuilder for AreaStartingPosition {
 impl AreaStartingPosition {
     #[allow(dead_code)]
     pub fn new(x: XStart, y: YStart) -> Box<AreaStartingPosition> {
-        Box::new(AreaStartingPosition{
-            x, y
-        })
+        Box::new(AreaStartingPosition { x, y })
     }
 
-    fn build(&mut self, _rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(
+        &mut self,
+        _rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         let seed_x;
         let seed_y;
-        
+
         match self.x {
             XStart::LEFT => seed_x = 1,
             XStart::CENTER => seed_x = build_data.map.width / 2,
-            XStart::RIGHT => seed_x = build_data.map.width -2
+            XStart::RIGHT => seed_x = build_data.map.width - 2,
         }
 
         match self.y {
             YStart::TOP => seed_y = 1,
             YStart::CENTER => seed_y = build_data.map.height / 2,
-            YStart::BOTTOM => seed_y = build_data.map.height - 2
+            YStart::BOTTOM => seed_y = build_data.map.height - 2,
         }
 
         let mut available_floors: Vec<(usize, f32)> = Vec::new();
         for (idx, tiletype) in build_data.map.tiles.iter().enumerate() {
             if map::tile_walkable(*tiletype) {
-                available_floors.push(
-                    (
-                        idx,
-                        crate::engine::DistanceAlg::PythagorasSquared.distance2d(
-                            crate::engine::Point::new(idx as i32 % build_data.map.width, idx as i32 / build_data.map.width),
-                            crate::engine::Point::new(seed_x, seed_y)
-                        )
-                    )
-                );
+                available_floors.push((
+                    idx,
+                    crate::engine::DistanceAlg::PythagorasSquared.distance2d(
+                        crate::engine::Point::new(
+                            idx as i32 % build_data.map.width,
+                            idx as i32 / build_data.map.width,
+                        ),
+                        crate::engine::Point::new(seed_x, seed_y),
+                    ),
+                ));
             }
         }
         if available_floors.is_empty() {
@@ -65,6 +80,9 @@ impl AreaStartingPosition {
         let start_x = available_floors[0].0 as i32 % build_data.map.width;
         let start_y = available_floors[0].0 as i32 / build_data.map.width;
 
-        build_data.starting_position = Some(Position { x: start_x, y: start_y })
+        build_data.starting_position = Some(Position {
+            x: start_x,
+            y: start_y,
+        })
     }
 }

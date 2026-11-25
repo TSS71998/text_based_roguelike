@@ -30,12 +30,16 @@ pub fn blend(dst: u32, src: u32, a: f32) -> u32 {
 pub struct Framebuffer {
     pub width: usize,
     pub height: usize,
-    pub pixels: Vec<u32>
+    pub pixels: Vec<u32>,
 }
 
 impl Framebuffer {
     pub fn new(width: usize, height: usize) -> Framebuffer {
-        Framebuffer { width, height, pixels: vec![0; width * height] }
+        Framebuffer {
+            width,
+            height,
+            pixels: vec![0; width * height],
+        }
     }
 
     pub fn clear(&mut self, color: u32) {
@@ -52,7 +56,7 @@ impl Framebuffer {
     #[inline]
     pub fn get(&self, x: i32, y: i32) -> u32 {
         if x >= 0 && y >= 0 && (x as usize) < self.width && (y as usize) < self.height {
-            self.pixels[ y as usize * self.width + x as usize]
+            self.pixels[y as usize * self.width + x as usize]
         } else {
             0
         }
@@ -60,7 +64,10 @@ impl Framebuffer {
 
     fn clip(&self, x: i32, y: i32, w: i32, h: i32) -> Option<(usize, usize, usize, usize)> {
         let (x0, y0) = (x.max(0), y.max(0));
-        let (x1, y1) = ((x + w).min(self.width as i32), (y + h).min(self.height as i32));
+        let (x1, y1) = (
+            (x + w).min(self.width as i32),
+            (y + h).min(self.height as i32),
+        );
         (x1 > x0 && y1 > y0).then_some((x0 as usize, y0 as usize, x1 as usize, y1 as usize))
     }
 
@@ -108,13 +115,22 @@ impl Framebuffer {
     pub fn crt(&mut self, burn: &[u32], skip: Option<(i32, i32, i32, i32)>) {
         const DARK: u32 = 26;
         let (sx0, sy0, sx1, sy1) = skip.map_or((0, 0, 0, 0), |(x, y, w, h)| {
-            (x.max(0) as usize, y.max(0) as usize, (x + w).max(0) as usize, (y + h).max(0) as usize)
+            (
+                x.max(0) as usize,
+                y.max(0) as usize,
+                (x + w).max(0) as usize,
+                (y + h).max(0) as usize,
+            )
         });
         for row in 0..self.height {
             let sub = if row % 2 == 0 { 96 } else { 32 };
             let line = row * self.width..(row + 1) * self.width;
             let skip_row = row >= sy0 && row < sy1;
-            for (col, (p, &b)) in self.pixels[line.clone()].iter_mut().zip(&burn[line]).enumerate() {
+            for (col, (p, &b)) in self.pixels[line.clone()]
+                .iter_mut()
+                .zip(&burn[line])
+                .enumerate()
+            {
                 if skip_row && col >= sx0 && col < sx1 {
                     continue;
                 }
@@ -122,7 +138,9 @@ impl Framebuffer {
                 *p = if r < DARK && g < DARK && bl < DARK {
                     b
                 } else {
-                    (r.saturating_sub(sub) << 16) | (g.saturating_sub(sub) << 8) | bl.saturating_sub(sub)
+                    (r.saturating_sub(sub) << 16)
+                        | (g.saturating_sub(sub) << 8)
+                        | bl.saturating_sub(sub)
                 };
             }
         }
@@ -132,7 +150,10 @@ impl Framebuffer {
         let mut out = Vec::with_capacity(width * height);
         for y in 0..height {
             for x in 0..width {
-                let (u, v) = ((x as f32 + 0.5) / width as f32 - 0.5, (y as f32 + 0.5) / height as f32 - 0.5);
+                let (u, v) = (
+                    (x as f32 + 0.5) / width as f32 - 0.5,
+                    (y as f32 + 0.5) / height as f32 - 0.5,
+                );
                 let d = ((1.0 - (u * u + v * v).sqrt()) * 0.2 * 255.0) as u32;
                 out.push((d << 8) | d);
             }
@@ -158,7 +179,7 @@ impl Framebuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
- 
+
     #[test]
     fn blend_and_pack() {
         assert_eq!(pack(RGB::from_f32(1.0, 0.5, 0.0)), 0xFF8000);
@@ -168,7 +189,7 @@ mod tests {
         assert_eq!(half, 0x7F007F);
         assert_eq!(unpack(0xFF8000), RGB::from_u8(255, 128, 0));
     }
- 
+
     #[test]
     fn rects_clip_and_scale() {
         let mut fb = Framebuffer::new(4, 4);

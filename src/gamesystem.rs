@@ -1,7 +1,7 @@
 use crate::{Skill, Skills};
 
 pub fn attr_bonus(value: i32) -> i32 {
-    (value-10)/2
+    (value - 10) / 2
 }
 
 pub fn player_hp_per_level(fitness: i32) -> i32 {
@@ -14,7 +14,7 @@ pub fn player_hp_at_level(fitness: i32, level: i32) -> i32 {
 
 pub fn npc_hp(fitness: i32, level: i32) -> i32 {
     let mut total = 1;
-    for _i in 0 .. level {
+    for _i in 0..level {
         total += i32::max(1, 8 + attr_bonus(fitness));
     }
     total

@@ -1,88 +1,170 @@
-use std::collections::HashMap;
 use crate::engine::{RGB, RandomNumberGenerator};
-use specs::prelude::*;
 use crate::{EquipmentChanged, Facing, Faction, Initiative};
+use specs::prelude::*;
+use std::collections::HashMap;
 
-use super::{Player, Renderable, Name, Position, Viewshed, Rect, 
-            SerializeMe,random_table::RandomTable, HungerClock, HungerState, Map, TileType, raws::*,
-            Attribute, Attributes, attr_bonus, Skills, Skill, Pool, Pools, mana_at_level, player_hp_at_level, LightSource};
+use super::{
+    Attribute, Attributes, HungerClock, HungerState, LightSource, Map, Name, Player, Pool, Pools,
+    Position, Rect, Renderable, SerializeMe, Skill, Skills, TileType, Viewshed, attr_bonus,
+    mana_at_level, player_hp_at_level, random_table::RandomTable, raws::*,
+};
 use specs::saveload::{MarkedBuilder, SimpleMarker};
 
 const MAX_MONSTERS: i32 = 4;
 
 pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
-    let mut skills = Skills{skills: HashMap::new()};
+    let mut skills = Skills {
+        skills: HashMap::new(),
+    };
     skills.skills.insert(Skill::Melee, 1);
     skills.skills.insert(Skill::Defense, 1);
     skills.skills.insert(Skill::Magic, 1);
-    
+
     let player = ecs
         .create_entity()
-        .with(Position {x: player_x, y: player_y})
+        .with(Position {
+            x: player_x,
+            y: player_y,
+        })
         .with(Facing::default())
         .with(Renderable {
             glyph: crate::engine::to_cp437('@'),
             fg: RGB::named(crate::engine::YELLOW),
             bg: RGB::named(crate::engine::BLACK),
-            render_order: 0
+            render_order: 0,
         })
-        .with(Player{})
-        .with(Viewshed {visible_tiles: Vec::new(), range: 8, dirty: true})
-        .with(Name{name: "Player".to_string()})
-        .with(HungerClock{state: HungerState::WellFed, duration: 20})
-        .with(Attributes{
-            might: Attribute { base: 11, modifiers: 0, bonus: attr_bonus(11) },
-            fitness: Attribute { base:11, modifiers: 0, bonus: attr_bonus(11) },
-            quickness: Attribute { base:11, modifiers: 0, bonus: attr_bonus(11) },
-            intelligence: Attribute { base:11, modifiers: 0, bonus: attr_bonus(11) },
+        .with(Player {})
+        .with(Viewshed {
+            visible_tiles: Vec::new(),
+            range: 8,
+            dirty: true,
+        })
+        .with(Name {
+            name: "Player".to_string(),
+        })
+        .with(HungerClock {
+            state: HungerState::WellFed,
+            duration: 20,
+        })
+        .with(Attributes {
+            might: Attribute {
+                base: 11,
+                modifiers: 0,
+                bonus: attr_bonus(11),
+            },
+            fitness: Attribute {
+                base: 11,
+                modifiers: 0,
+                bonus: attr_bonus(11),
+            },
+            quickness: Attribute {
+                base: 11,
+                modifiers: 0,
+                bonus: attr_bonus(11),
+            },
+            intelligence: Attribute {
+                base: 11,
+                modifiers: 0,
+                bonus: attr_bonus(11),
+            },
         })
         .with(skills)
-        .with(Pools{
-            hit_points: Pool{
+        .with(Pools {
+            hit_points: Pool {
                 current: player_hp_at_level(11, 1),
-                max: player_hp_at_level(11, 1)
+                max: player_hp_at_level(11, 1),
             },
-            mana: Pool{
+            mana: Pool {
                 current: mana_at_level(11, 1),
-                max: mana_at_level(11, 1)
+                max: mana_at_level(11, 1),
             },
             xp: 0,
             level: 1,
             total_weight: 0.0,
-            total_initiative_penalty: 0.0
+            total_initiative_penalty: 0.0,
         })
-        .with(LightSource::flickering(crate::engine::RGB::from_f32(1.0, 1.0, 0.5), 8, 0.25))
-        .with(Initiative{current: 0})
-        .with(Faction{name: "Player".to_string()})
-        .with(EquipmentChanged{})
+        .with(LightSource::flickering(
+            crate::engine::RGB::from_f32(1.0, 1.0, 0.5),
+            8,
+            0.25,
+        ))
+        .with(Initiative { current: 0 })
+        .with(Faction {
+            name: "Player".to_string(),
+        })
+        .with(EquipmentChanged {})
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
-    
-    spawn_named_entity(&RAWS.lock().unwrap(), ecs, "Rusty Longsword", SpawnType::Equipped { by: player });
-    spawn_named_entity(&RAWS.lock().unwrap(), ecs, "Dried Sausage", SpawnType::Carried { by: player });
-    spawn_named_entity(&RAWS.lock().unwrap(), ecs, "Beer", SpawnType::Carried { by: player });
-    spawn_named_entity(&RAWS.lock().unwrap(), ecs, "Stained Tunic", SpawnType::Equipped { by: player });
-    spawn_named_entity(&RAWS.lock().unwrap(), ecs, "Torn Trousers", SpawnType::Equipped { by: player });
-    spawn_named_entity(&RAWS.lock().unwrap(), ecs, "Old Boots", SpawnType::Equipped { by: player });
-    player
 
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        ecs,
+        "Rusty Longsword",
+        SpawnType::Equipped { by: player },
+    );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        ecs,
+        "Dried Sausage",
+        SpawnType::Carried { by: player },
+    );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        ecs,
+        "Beer",
+        SpawnType::Carried { by: player },
+    );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        ecs,
+        "Stained Tunic",
+        SpawnType::Equipped { by: player },
+    );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        ecs,
+        "Torn Trousers",
+        SpawnType::Equipped { by: player },
+    );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        ecs,
+        "Old Boots",
+        SpawnType::Equipped { by: player },
+    );
+    player
 }
 
 fn room_table(map_depth: i32) -> RandomTable {
     get_spawn_table_for_depth(&RAWS.lock().unwrap(), map_depth)
 }
 
-pub fn spawn_region(_map: &Map, rng: &mut RandomNumberGenerator, area: &[usize], map_depth: i32, spawn_list: &mut Vec<(usize, String)>) {
+pub fn spawn_region(
+    _map: &Map,
+    rng: &mut RandomNumberGenerator,
+    area: &[usize],
+    map_depth: i32,
+    spawn_list: &mut Vec<(usize, String)>,
+) {
     let spawn_table = room_table(map_depth);
     let mut spawn_points: HashMap<usize, String> = HashMap::new();
     let mut areas: Vec<usize> = Vec::from(area);
 
     {
-        let num_spawns = i32::min(areas.len() as i32, rng.roll_dice(1, MAX_MONSTERS + 3) + (map_depth - 1) - 3);
-        if num_spawns == 0 {return;}
+        let num_spawns = i32::min(
+            areas.len() as i32,
+            rng.roll_dice(1, MAX_MONSTERS + 3) + (map_depth - 1) - 3,
+        );
+        if num_spawns == 0 {
+            return;
+        }
 
         for _i in 0..num_spawns {
-            let array_index = if areas.len() == 1 {0usize} else {(rng.roll_dice(1, areas.len() as i32) - 1) as usize};
+            let array_index = if areas.len() == 1 {
+                0usize
+            } else {
+                (rng.roll_dice(1, areas.len() as i32) - 1) as usize
+            };
             let map_idx = areas[array_index];
             spawn_points.insert(map_idx, spawn_table.roll(rng));
             areas.remove(array_index);
@@ -91,14 +173,20 @@ pub fn spawn_region(_map: &Map, rng: &mut RandomNumberGenerator, area: &[usize],
 
     for spawn in spawn_points.iter() {
         spawn_list.push((*spawn.0, spawn.1.to_string()));
-    }   
+    }
 }
 
-pub fn spawn_room(map: &Map, rng: &mut RandomNumberGenerator, room: &Rect, map_depth: i32, spawn_list: &mut Vec<(usize, String)>) {
+pub fn spawn_room(
+    map: &Map,
+    rng: &mut RandomNumberGenerator,
+    room: &Rect,
+    map_depth: i32,
+    spawn_list: &mut Vec<(usize, String)>,
+) {
     let mut possible_targets: Vec<usize> = Vec::new();
     {
-        for y in room.y1 + 1 .. room.y2 {
-            for x in room.x1 + 1 .. room.x2 {
+        for y in room.y1 + 1..room.y2 {
+            for x in room.x1 + 1..room.x2 {
                 let idx = map.xy_idx(x, y);
                 if map.tiles[idx] == TileType::Floor {
                     possible_targets.push(idx);
@@ -112,11 +200,16 @@ pub fn spawn_room(map: &Map, rng: &mut RandomNumberGenerator, room: &Rect, map_d
 pub fn spawn_entity(ecs: &mut World, spawn: &(&usize, &String)) {
     let map = ecs.fetch::<Map>();
     let width = map.width as usize;
-    let x = (*spawn.0 % width)  as i32;
+    let x = (*spawn.0 % width) as i32;
     let y = (*spawn.0 / width) as i32;
     std::mem::drop(map);
 
-    let spawn_result = spawn_named_entity(&RAWS.lock().unwrap(), ecs, &spawn.1, SpawnType::AtPosition { x, y });
+    let spawn_result = spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        ecs,
+        &spawn.1,
+        SpawnType::AtPosition { x, y },
+    );
     if spawn_result.is_some() {
         return;
     }

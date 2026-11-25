@@ -1,36 +1,70 @@
+use super::{
+    Attributes, EquipmentSlot, Equipped, HungerClock, HungerState, MeleeWeapon, Name,
+    NaturalAttackDefense, Pools, Position, Skill, Skills, SufferDamage, WantsToMelee,
+    WeaponAttribute, Wearable,
+    gamelog::GameLog,
+    particle_system::ParticleBuilder,
+    presentation::{Events, GameEvent},
+    skill_bonus,
+};
 use specs::prelude::*;
-use super::{presentation::{Events, GameEvent}, Attributes, WantsToMelee, Name, SufferDamage, gamelog::GameLog, particle_system::ParticleBuilder, 
-            Position, HungerClock, HungerState, Skills, Pools, skill_bonus, Skill, Equipped, MeleeWeapon, WeaponAttribute,
-            EquipmentSlot, Wearable, NaturalAttackDefense};
 
 pub struct MeleeCombatSystem {}
 
 impl<'a> System<'a> for MeleeCombatSystem {
-    type SystemData = ( Entities<'a>,
-                        WriteExpect<'a, GameLog>,
-                        WriteStorage<'a, WantsToMelee>,
-                        ReadStorage<'a, Name>,
-                        ReadStorage<'a, Attributes>,
-                        ReadStorage<'a, Skills>,
-                        WriteStorage<'a, SufferDamage>,
-                        WriteExpect<'a, ParticleBuilder>,
-                        ReadStorage<'a, Position>,
-                        ReadStorage<'a, HungerClock>,
-                        ReadStorage<'a, Pools>,
-                        WriteExpect<'a, crate::engine::RandomNumberGenerator>,
-                        ReadStorage<'a, Equipped>,
-                        ReadStorage<'a, MeleeWeapon>,
-                        ReadStorage<'a, Wearable>,
-                        ReadStorage<'a, NaturalAttackDefense>,
-                        ReadExpect<'a, Entity>,
-                        WriteExpect<'a, Events>
-                    );
+    type SystemData = (
+        Entities<'a>,
+        WriteExpect<'a, GameLog>,
+        WriteStorage<'a, WantsToMelee>,
+        ReadStorage<'a, Name>,
+        ReadStorage<'a, Attributes>,
+        ReadStorage<'a, Skills>,
+        WriteStorage<'a, SufferDamage>,
+        WriteExpect<'a, ParticleBuilder>,
+        ReadStorage<'a, Position>,
+        ReadStorage<'a, HungerClock>,
+        ReadStorage<'a, Pools>,
+        WriteExpect<'a, crate::engine::RandomNumberGenerator>,
+        ReadStorage<'a, Equipped>,
+        ReadStorage<'a, MeleeWeapon>,
+        ReadStorage<'a, Wearable>,
+        ReadStorage<'a, NaturalAttackDefense>,
+        ReadExpect<'a, Entity>,
+        WriteExpect<'a, Events>,
+    );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (entities, mut log, mut wants_melee, names, attributes, skills, mut inflict_damage, 
-            mut particle_builder, positions, hunger_clocks, pools, mut rng, equipped_items, meleeweapons, wearables, natural, player_entity, mut events) = data;
+        let (
+            entities,
+            mut log,
+            mut wants_melee,
+            names,
+            attributes,
+            skills,
+            mut inflict_damage,
+            mut particle_builder,
+            positions,
+            hunger_clocks,
+            pools,
+            mut rng,
+            equipped_items,
+            meleeweapons,
+            wearables,
+            natural,
+            player_entity,
+            mut events,
+        ) = data;
 
-        for (entity, wants_melee, name, attacker_attributes, attacker_skills, attacker_pools) in (&entities, &wants_melee, &names, &attributes, &skills, &pools).join() {
+        for (entity, wants_melee, name, attacker_attributes, attacker_skills, attacker_pools) in (
+            &entities,
+            &wants_melee,
+            &names,
+            &attributes,
+            &skills,
+            &pools,
+        )
+            .join()
+        {
             let target_pools = pools.get(wants_melee.target).unwrap();
             let target_attributes = attributes.get(wants_melee.target).unwrap();
             let target_skills = skills.get(wants_melee.target).unwrap();
@@ -42,12 +76,16 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     hit_bonus: 0,
                     damage_n_dice: 1,
                     damage_die_type: 4,
-                    damage_bonus: 0
+                    damage_bonus: 0,
                 };
 
                 if let Some(nat) = natural.get(entity) {
                     if !nat.attacks.is_empty() {
-                        let attack_index = if nat.attacks.len() == 1 {0} else {rng.roll_dice(1, nat.attacks.len() as i32) as usize - 1};
+                        let attack_index = if nat.attacks.len() == 1 {
+                            0
+                        } else {
+                            rng.roll_dice(1, nat.attacks.len() as i32) as usize - 1
+                        };
                         weapon_info.hit_bonus = nat.attacks[attack_index].hit_bonus;
                         weapon_info.damage_n_dice = nat.attacks[attack_index].damage_n_dice;
                         weapon_info.damage_die_type = nat.attacks[attack_index].damage_die_type;
@@ -62,9 +100,11 @@ impl<'a> System<'a> for MeleeCombatSystem {
                 }
 
                 let natural_roll = rng.roll_dice(1, 20);
-                let attribute_hit_bonus = if weapon_info.attribute == WeaponAttribute:: Might 
-                    {attacker_attributes.might.bonus}
-                    else {attacker_attributes.quickness.bonus};
+                let attribute_hit_bonus = if weapon_info.attribute == WeaponAttribute::Might {
+                    attacker_attributes.might.bonus
+                } else {
+                    attacker_attributes.quickness.bonus
+                };
                 let skill_hit_bonus = skill_bonus(Skill::Melee, &*attacker_skills);
                 let weapon_hit_bonus = weapon_info.hit_bonus;
                 let mut status_hit_bonus = 0;
@@ -73,7 +113,11 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         status_hit_bonus += 1;
                     }
                 }
-                let modified_hit_roll = natural_roll + attribute_hit_bonus + skill_hit_bonus + weapon_hit_bonus + status_hit_bonus;
+                let modified_hit_roll = natural_roll
+                    + attribute_hit_bonus
+                    + skill_hit_bonus
+                    + weapon_hit_bonus
+                    + status_hit_bonus;
 
                 let mut armor_item_bonus_f = 0.0;
                 for (wielded, armor) in (&equipped_items, &wearables).join() {
@@ -84,36 +128,88 @@ impl<'a> System<'a> for MeleeCombatSystem {
 
                 let base_armor_class = match natural.get(wants_melee.target) {
                     None => 10,
-                    Some(nat) => nat.armor_class.unwrap_or(10)
+                    Some(nat) => nat.armor_class.unwrap_or(10),
                 };
                 let armor_quickness = target_attributes.quickness.bonus;
                 let armor_skill_bonus = skill_bonus(Skill::Defense, &*target_skills);
                 let armor_item_bonus = armor_item_bonus_f as i32;
-                let armor_class = base_armor_class + armor_quickness + armor_skill_bonus + armor_item_bonus;
+                let armor_class =
+                    base_armor_class + armor_quickness + armor_skill_bonus + armor_item_bonus;
 
                 if natural_roll != 1 && (natural_roll == 20 || modified_hit_roll > armor_class) {
-                    let base_damage = rng.roll_dice(weapon_info.damage_n_dice, weapon_info.damage_die_type);
+                    let base_damage =
+                        rng.roll_dice(weapon_info.damage_n_dice, weapon_info.damage_die_type);
                     let attr_damage_bonus = attacker_attributes.might.bonus;
                     let skill_damage_bonus = skill_bonus(Skill::Melee, &*attacker_skills);
                     let weapon_damage_bonus = weapon_info.damage_bonus;
 
-                    let damage = i32::max(0, base_damage + attr_damage_bonus + skill_hit_bonus + skill_damage_bonus + weapon_damage_bonus);
-                    SufferDamage::new_damage(&mut inflict_damage, wants_melee.target, damage, entity == *player_entity);
-                    log.entries.push(format!("{} hits {}, for {} hp.", &name.name, &target_name.name, damage));
-                    events.push(GameEvent::Attack { attacker: entity, target: wants_melee.target, damage: Some(damage) });
+                    let damage = i32::max(
+                        0,
+                        base_damage
+                            + attr_damage_bonus
+                            + skill_hit_bonus
+                            + skill_damage_bonus
+                            + weapon_damage_bonus,
+                    );
+                    SufferDamage::new_damage(
+                        &mut inflict_damage,
+                        wants_melee.target,
+                        damage,
+                        entity == *player_entity,
+                    );
+                    log.entries.push(format!(
+                        "{} hits {}, for {} hp.",
+                        &name.name, &target_name.name, damage
+                    ));
+                    events.push(GameEvent::Attack {
+                        attacker: entity,
+                        target: wants_melee.target,
+                        damage: Some(damage),
+                    });
                     if let Some(pos) = positions.get(wants_melee.target) {
-                        particle_builder.requests(pos.x, pos.y, crate::engine::RGB::named(crate::engine::ORANGE), crate::engine::RGB::named(crate::engine::BLACK), crate::engine::to_cp437('‼'), 200.0);
+                        particle_builder.requests(
+                            pos.x,
+                            pos.y,
+                            crate::engine::RGB::named(crate::engine::ORANGE),
+                            crate::engine::RGB::named(crate::engine::BLACK),
+                            crate::engine::to_cp437('‼'),
+                            200.0,
+                        );
                     }
                 } else if natural_roll == 1 {
-                    log.entries.push(format!("{} considers attacking {}, but was too shy to try", &name.name, &target_name.name));
+                    log.entries.push(format!(
+                        "{} considers attacking {}, but was too shy to try",
+                        &name.name, &target_name.name
+                    ));
                     if let Some(pos) = positions.get(wants_melee.target) {
-                        particle_builder.requests(pos.x, pos.y, crate::engine::RGB::named(crate::engine::ORANGE), crate::engine::RGB::named(crate::engine::BLACK), crate::engine::to_cp437('‼'), 200.0);
+                        particle_builder.requests(
+                            pos.x,
+                            pos.y,
+                            crate::engine::RGB::named(crate::engine::ORANGE),
+                            crate::engine::RGB::named(crate::engine::BLACK),
+                            crate::engine::to_cp437('‼'),
+                            200.0,
+                        );
                     }
                 } else {
-                    log.entries.push(format!("{} attacks {}, but misses", &name.name, &target_name.name));
-                    events.push(GameEvent::Attack { attacker: entity, target: wants_melee.target, damage: None });
+                    log.entries.push(format!(
+                        "{} attacks {}, but misses",
+                        &name.name, &target_name.name
+                    ));
+                    events.push(GameEvent::Attack {
+                        attacker: entity,
+                        target: wants_melee.target,
+                        damage: None,
+                    });
                     if let Some(pos) = positions.get(wants_melee.target) {
-                        particle_builder.requests(pos.x, pos.y, crate::engine::RGB::named(crate::engine::ORANGE), crate::engine::RGB::named(crate::engine::BLACK), crate::engine::to_cp437('‼'), 200.0);
+                        particle_builder.requests(
+                            pos.x,
+                            pos.y,
+                            crate::engine::RGB::named(crate::engine::ORANGE),
+                            crate::engine::RGB::named(crate::engine::BLACK),
+                            crate::engine::to_cp437('‼'),
+                            200.0,
+                        );
                     }
                 }
             }

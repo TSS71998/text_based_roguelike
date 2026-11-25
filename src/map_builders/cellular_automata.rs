@@ -1,16 +1,24 @@
-use super::{InitialMapBuilder, MetaMapBuilder, BuilderMap, TileType};
+use super::{BuilderMap, InitialMapBuilder, MetaMapBuilder, TileType};
 pub struct CellularAutomataBuilder {}
 
 impl InitialMapBuilder for CellularAutomataBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.build(rng, build_data);
     }
 }
 
 impl MetaMapBuilder for CellularAutomataBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, _rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        _rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.apply_iteration(build_data);
     }
 }
@@ -18,17 +26,24 @@ impl MetaMapBuilder for CellularAutomataBuilder {
 impl CellularAutomataBuilder {
     #[allow(dead_code)]
     pub fn new() -> Box<CellularAutomataBuilder> {
-        Box::new(CellularAutomataBuilder{})
+        Box::new(CellularAutomataBuilder {})
     }
 
     #[allow(clippy::map_entry)]
-    fn build(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         for y in 1..build_data.map.height - 1 {
             for x in 1..build_data.map.width - 1 {
                 let roll = rng.roll_dice(1, 100);
                 let idx = build_data.map.xy_idx(x, y);
-                if roll > 55 {build_data.map.tiles[idx] = TileType::Floor}
-                else {build_data.map.tiles[idx] = TileType::Wall}
+                if roll > 55 {
+                    build_data.map.tiles[idx] = TileType::Floor
+                } else {
+                    build_data.map.tiles[idx] = TileType::Wall
+                }
             }
         }
         build_data.take_snapshot();
@@ -45,14 +60,34 @@ impl CellularAutomataBuilder {
             for x in 1..build_data.map.width - 1 {
                 let idx = build_data.map.xy_idx(x, y);
                 let mut neighbors = 0;
-                if build_data.map.tiles[idx - 1] == TileType::Wall {neighbors += 1;}
-                if build_data.map.tiles[idx + 1] == TileType::Wall {neighbors += 1;}
-                if build_data.map.tiles[idx - build_data.map.width as usize] == TileType::Wall {neighbors += 1;}
-                if build_data.map.tiles[idx + build_data.map.width as usize] == TileType::Wall {neighbors += 1;}
-                if build_data.map.tiles[idx - (build_data.map.width as usize - 1)] == TileType::Wall {neighbors += 1;}
-                if build_data.map.tiles[idx - (build_data.map.width as usize + 1)] == TileType::Wall {neighbors += 1;}
-                if build_data.map.tiles[idx + (build_data.map.width as usize - 1)] == TileType::Wall {neighbors += 1;}
-                if build_data.map.tiles[idx + (build_data.map.width as usize + 1)] == TileType::Wall {neighbors += 1;}
+                if build_data.map.tiles[idx - 1] == TileType::Wall {
+                    neighbors += 1;
+                }
+                if build_data.map.tiles[idx + 1] == TileType::Wall {
+                    neighbors += 1;
+                }
+                if build_data.map.tiles[idx - build_data.map.width as usize] == TileType::Wall {
+                    neighbors += 1;
+                }
+                if build_data.map.tiles[idx + build_data.map.width as usize] == TileType::Wall {
+                    neighbors += 1;
+                }
+                if build_data.map.tiles[idx - (build_data.map.width as usize - 1)] == TileType::Wall
+                {
+                    neighbors += 1;
+                }
+                if build_data.map.tiles[idx - (build_data.map.width as usize + 1)] == TileType::Wall
+                {
+                    neighbors += 1;
+                }
+                if build_data.map.tiles[idx + (build_data.map.width as usize - 1)] == TileType::Wall
+                {
+                    neighbors += 1;
+                }
+                if build_data.map.tiles[idx + (build_data.map.width as usize + 1)] == TileType::Wall
+                {
+                    neighbors += 1;
+                }
 
                 if neighbors > 4 || neighbors == 0 {
                     newtiles[idx] = TileType::Wall;

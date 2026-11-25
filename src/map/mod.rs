@@ -1,5 +1,5 @@
 use crate::engine::{Algorithm2D, BaseMap, Point};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 mod tiletype;
 pub use tiletype::*;
@@ -20,11 +20,11 @@ pub struct Map {
     pub view_blocked: Vec<bool>,
     pub name: String,
     pub outdoors: bool,
-    pub light: Vec<crate::engine::RGB>
+    pub light: Vec<crate::engine::RGB>,
 }
 
-impl Map{
-    pub fn xy_idx(&self,x: i32, y: i32) -> usize {
+impl Map {
+    pub fn xy_idx(&self, x: i32, y: i32) -> usize {
         (y as usize * self.width as usize) + x as usize
     }
 
@@ -37,7 +37,7 @@ impl Map{
     }
 
     pub fn new<S: ToString>(new_depth: i32, width: i32, height: i32, name: S) -> Map {
-        let map_tile_count = (width*height) as usize;
+        let map_tile_count = (width * height) as usize;
         crate::spatial::set_size(map_tile_count);
         Map {
             tiles: vec![TileType::Wall; map_tile_count],
@@ -49,8 +49,8 @@ impl Map{
             bloodstains: vec![false; map_tile_count],
             view_blocked: vec![false; map_tile_count],
             name: name.to_string(),
-            outdoors: true, 
-            light: vec![crate::engine::RGB::from_f32(0.0, 0.0, 0.0); map_tile_count]
+            outdoors: true,
+            light: vec![crate::engine::RGB::from_f32(0.0, 0.0, 0.0); map_tile_count],
         }
     }
 }
@@ -77,31 +77,49 @@ impl BaseMap for Map {
         crate::engine::DistanceAlg::Manhattan.distance2d(p1, p2)
     }
 
-    fn get_available_exits(&self, idx:usize) -> crate::engine::Exits {
-        const DIAGONAL_COST : f32 = 1.5;
+    fn get_available_exits(&self, idx: usize) -> crate::engine::Exits {
+        const DIAGONAL_COST: f32 = 1.5;
         let mut exits = crate::engine::Exits::new();
         let x = idx as i32 % self.width;
         let y = idx as i32 / self.width;
         let tt = self.tiles[idx as usize];
-        let w = self.width  as usize;
+        let w = self.width as usize;
 
         let spatial = crate::spatial::lock();
         let valid = |nx: i32, ny: i32| -> bool {
-            if nx < 1 || nx > self.width - 1 || ny < 1 || ny > self.height - 1 {return false;}
+            if nx < 1 || nx > self.width - 1 || ny < 1 || ny > self.height - 1 {
+                return false;
+            }
             !spatial.is_blocked(self.xy_idx(nx, ny))
         };
 
         // Cardinal directions
-        if valid(x-1, y) { exits.push((idx-1, tile_cost(tt))) };
-        if valid(x+1, y) { exits.push((idx+1, tile_cost(tt))) };
-        if valid(x, y-1) { exits.push((idx-w, tile_cost(tt))) };
-        if valid(x, y+1) { exits.push((idx+w, tile_cost(tt))) };
+        if valid(x - 1, y) {
+            exits.push((idx - 1, tile_cost(tt)))
+        };
+        if valid(x + 1, y) {
+            exits.push((idx + 1, tile_cost(tt)))
+        };
+        if valid(x, y - 1) {
+            exits.push((idx - w, tile_cost(tt)))
+        };
+        if valid(x, y + 1) {
+            exits.push((idx + w, tile_cost(tt)))
+        };
 
         // Diagonals
-        if valid(x-1, y-1) { exits.push(((idx-w)-1, tile_cost(tt) * DIAGONAL_COST)); }
-        if valid(x+1, y-1) { exits.push(((idx-w)+1, tile_cost(tt) * DIAGONAL_COST)); }
-        if valid(x-1, y+1) { exits.push(((idx+w)-1, tile_cost(tt) * DIAGONAL_COST)); }
-        if valid(x+1, y+1) { exits.push(((idx+w)+1, tile_cost(tt) * DIAGONAL_COST)); }
+        if valid(x - 1, y - 1) {
+            exits.push(((idx - w) - 1, tile_cost(tt) * DIAGONAL_COST));
+        }
+        if valid(x + 1, y - 1) {
+            exits.push(((idx - w) + 1, tile_cost(tt) * DIAGONAL_COST));
+        }
+        if valid(x - 1, y + 1) {
+            exits.push(((idx + w) - 1, tile_cost(tt) * DIAGONAL_COST));
+        }
+        if valid(x + 1, y + 1) {
+            exits.push(((idx + w) + 1, tile_cost(tt) * DIAGONAL_COST));
+        }
 
         exits
     }

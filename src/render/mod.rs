@@ -1,5 +1,5 @@
-use crate::engine::{Ctx, LayerKind};
 use crate::RunState;
+use crate::engine::{Ctx, LayerKind};
 use specs::prelude::*;
 
 pub mod first_person;
@@ -12,9 +12,16 @@ pub const UI_LAYER: usize = 3;
 
 pub const LAYERS: [LayerKind; 4] = [
     LayerKind::Simple,
-    LayerKind::Pixels { x: VIEWPORT.0, y: VIEWPORT.1, w: VIEWPORT.2, h: VIEWPORT.3, width: 384, height: 352 },
+    LayerKind::Pixels {
+        x: VIEWPORT.0,
+        y: VIEWPORT.1,
+        w: VIEWPORT.2,
+        h: VIEWPORT.3,
+        width: 384,
+        height: 352,
+    },
     LayerKind::Fancy,
-    LayerKind::Sparse
+    LayerKind::Sparse,
 ];
 
 pub const VIEWPORT: (i32, i32, i32, i32) = (1, 1, 48, 44);
@@ -23,14 +30,14 @@ pub const VIEWPORT: (i32, i32, i32, i32) = (1, 1, 48, 44);
 pub enum ViewMode {
     #[default]
     TopDown,
-    FirstPerson
+    FirstPerson,
 }
 
 impl ViewMode {
     pub fn toggled(self) -> ViewMode {
         match self {
             ViewMode::TopDown => ViewMode::FirstPerson,
-            ViewMode::FirstPerson => ViewMode::TopDown
+            ViewMode::FirstPerson => ViewMode::TopDown,
         }
     }
 }
@@ -39,7 +46,7 @@ pub fn effective_view(ecs: &World) -> ViewMode {
     let chosen = ecs.try_fetch::<ViewMode>().map(|m| *m).unwrap_or_default();
     match ecs.try_fetch::<RunState>().map(|s| *s) {
         Some(RunState::ShowTargeting { .. }) => ViewMode::TopDown,
-        _ => chosen
+        _ => chosen,
     }
 }
 
@@ -57,6 +64,6 @@ pub fn render_world(ecs: &World, ctx: &mut Ctx) {
             ctx.set_layer_visible(VIEW3D_LAYER, false);
             top_down::render(ecs, ctx);
         }
-        ViewMode::FirstPerson => first_person::render(ecs, ctx)
+        ViewMode::FirstPerson => first_person::render(ecs, ctx),
     }
 }

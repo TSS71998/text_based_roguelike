@@ -19,10 +19,12 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use bincode::Options;
 use crate::engine::Point;
+use bincode::Options;
 use specs::prelude::*;
-use specs::saveload::{DeserializeComponents, SerializeComponents, SimpleMarker, SimpleMarkerAllocator};
+use specs::saveload::{
+    DeserializeComponents, SerializeComponents, SimpleMarker, SimpleMarkerAllocator,
+};
 
 use super::components::*;
 use super::map::{Map, MasterDungeonMap};
@@ -39,10 +41,10 @@ const COMPRESSION_LEVEL: u8 = 6;
 const MAX_PAYLOAD: usize = 256 * 1024 * 1024;
 
 #[derive(Debug)]
-pub enum SaveError{
+pub enum SaveError {
     Io(io::Error),
     Format(String),
-    UnsupportedVersion {found: u16, expected: u16},
+    UnsupportedVersion { found: u16, expected: u16 },
     MissingPlayer,
 }
 
@@ -52,7 +54,10 @@ impl fmt::Display for SaveError {
             SaveError::Io(e) => write!(f, "file error: {e}"),
             SaveError::Format(e) => write!(f, "corrupt or incompatible save: {e}"),
             SaveError::UnsupportedVersion { found, expected } => {
-                write!(f, "save is version {found}, this build read version {expected}")
+                write!(
+                    f,
+                    "save is version {found}, this build read version {expected}"
+                )
             }
             SaveError::MissingPlayer => write!(f, "save contains no player"),
         }
@@ -62,15 +67,21 @@ impl fmt::Display for SaveError {
 impl Error for SaveError {}
 
 impl From<io::Error> for SaveError {
-    fn from(e: io::Error) -> Self { SaveError::Io(e) }
+    fn from(e: io::Error) -> Self {
+        SaveError::Io(e)
+    }
 }
 
 impl From<bincode::Error> for SaveError {
-    fn from(e: bincode::Error) -> Self { SaveError::Format(e.to_string()) }
+    fn from(e: bincode::Error) -> Self {
+        SaveError::Format(e.to_string())
+    }
 }
 
 impl From<Corrupt> for SaveError {
-    fn from(e: Corrupt) -> Self { SaveError::Format(e.0.to_string()) }
+    fn from(e: Corrupt) -> Self {
+        SaveError::Format(e.0.to_string())
+    }
 }
 
 fn bincode_options() -> impl Options + Copy {
@@ -86,7 +97,9 @@ pub fn delete_save() {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn save_game(_ecs: &World) -> Result<(), SaveError> { Ok(()) }
+pub fn save_game(_ecs: &World) -> Result<(), SaveError> {
+    Ok(())
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save_game(ecs: &World) -> Result<(), SaveError> {
@@ -127,8 +140,8 @@ fn encode_save(ecs: &World) -> Result<Vec<u8>, SaveError> {
     serialize_components(ecs, &mut w)?;
 
     let payload = w.buf;
-    let payload_len = u32::try_from(payload.len())
-        .map_err(|_| SaveError::Format("save too large".into()))?;
+    let payload_len =
+        u32::try_from(payload.len()).map_err(|_| SaveError::Format("save too large".into()))?;
     let body = miniz_oxide::deflate::compress_to_vec_zlib(&payload, COMPRESSION_LEVEL);
 
     let mut out = Vec::with_capacity(HEADER_LEN + body.len());
@@ -213,7 +226,10 @@ pub fn load_game_from(ecs: &mut World, path: impl AsRef<Path>) -> Result<(), Sav
         let entries = ecs.entities();
         let players = ecs.read_storage::<Player>();
         let positions = ecs.read_storage::<Position>();
-        (&entries, &players, &positions).join().next().map(|(e, _, pos)| (e, Point::new(pos.x, pos.y)))
+        (&entries, &players, &positions)
+            .join()
+            .next()
+            .map(|(e, _, pos)| (e, Point::new(pos.x, pos.y)))
     };
 
     let (entity, point) = player.ok_or(SaveError::MissingPlayer)?;
@@ -229,7 +245,10 @@ fn decode_container(bytes: &[u8]) -> Result<Vec<u8>, SaveError> {
     }
     let version = u16::from_le_bytes([bytes[4], bytes[5]]);
     if version != SAVE_VERSION {
-        return Err(SaveError::UnsupportedVersion { found: version, expected: SAVE_VERSION });
+        return Err(SaveError::UnsupportedVersion {
+            found: version,
+            expected: SAVE_VERSION,
+        });
     }
     let flags = bytes[6];
     let len = u32::from_le_bytes([bytes[7], bytes[8], bytes[9], bytes[10]]) as usize;
@@ -304,21 +323,68 @@ macro_rules! savable_components {
 }
 
 savable_components!(
-    Position, Renderable, Player, Viewshed, Monster, Name, BlocksTile, SufferDamage, WantsToMelee,
-    Item, Consumable, Ranged, InflictsDamage, AreaEffect, Confusion, ProvidesHealing, InBackpack,
-    WantsToPickupItem, WantsToUseItem, WantsToDropItem, Equippable, Equipped, MeleeWeapon, Wearable,
-    WantsToRemoveItem, ParticleLifetime, HungerClock, ProvidesFood, MagicMapper, Hidden,
-    EntryTrigger, EntityMoved, SingleActivation, BlocksVisibility, Door, Bystander, Vendor,
-    Quips, Attributes, Skills, Pools, NaturalAttackDefense, LootTable, Carnivore, Herbivore,
-    OtherLevelPosition, LightSource, Initiative, MyTurn, Faction, WantsToApproach,
-    WantsToFlee, MoveMode, Chasing,
+    Position,
+    Renderable,
+    Player,
+    Viewshed,
+    Monster,
+    Name,
+    BlocksTile,
+    SufferDamage,
+    WantsToMelee,
+    Item,
+    Consumable,
+    Ranged,
+    InflictsDamage,
+    AreaEffect,
+    Confusion,
+    ProvidesHealing,
+    InBackpack,
+    WantsToPickupItem,
+    WantsToUseItem,
+    WantsToDropItem,
+    Equippable,
+    Equipped,
+    MeleeWeapon,
+    Wearable,
+    WantsToRemoveItem,
+    ParticleLifetime,
+    HungerClock,
+    ProvidesFood,
+    MagicMapper,
+    Hidden,
+    EntryTrigger,
+    EntityMoved,
+    SingleActivation,
+    BlocksVisibility,
+    Door,
+    Bystander,
+    Vendor,
+    Quips,
+    Attributes,
+    Skills,
+    Pools,
+    NaturalAttackDefense,
+    LootTable,
+    Carnivore,
+    Herbivore,
+    OtherLevelPosition,
+    LightSource,
+    Initiative,
+    MyTurn,
+    Faction,
+    WantsToApproach,
+    WantsToFlee,
+    MoveMode,
+    Chasing,
+    Facing,
 );
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{gamelog, lighting_system, map, particle_system, raws, rex_assets, spawner};
-    use specs::saveload::{Marker, MarkedBuilder};
+    use specs::saveload::{MarkedBuilder, Marker};
     use std::time::Instant;
 
     /// Map generation uses the global spatial index, so these tests can't run in parallel.
@@ -354,10 +420,16 @@ mod tests {
             let mut m = ecs.write_resource::<Map>();
             let n = m.tiles.len();
             for i in 0..n {
-                if (i / 7) % 5 != 0 { m.revealed_tiles[i] = true; }
+                if (i / 7) % 5 != 0 {
+                    m.revealed_tiles[i] = true;
+                }
             }
-            for i in (0..n).step_by(97) { m.bloodstains[i] = true; }
-            for i in 300..340 { m.visible_tiles[i] = true; }
+            for i in (0..n).step_by(97) {
+                m.bloodstains[i] = true;
+            }
+            for i in 300..340 {
+                m.visible_tiles[i] = true;
+            }
         }
         ecs.maintain();
         ecs
@@ -379,8 +451,13 @@ mod tests {
     fn sections(payload: &[u8]) -> Vec<(String, Vec<u8>)> {
         let mut r = ByteReader::new(payload);
         codec::read_map(&mut r).unwrap();
-        for _ in 0..r.usize().unwrap() { codec::read_map(&mut r).unwrap(); }
-        let mut out = vec![("maps".to_string(), payload[..payload.len() - r.remaining()].to_vec())];
+        for _ in 0..r.usize().unwrap() {
+            codec::read_map(&mut r).unwrap();
+        }
+        let mut out = vec![(
+            "maps".to_string(),
+            payload[..payload.len() - r.remaining()].to_vec(),
+        )];
         for _ in 0..r.usize().unwrap() {
             let name = r.str().unwrap();
             r.varint().unwrap();
@@ -392,7 +469,10 @@ mod tests {
     fn skills_by_marker(ecs: &World) -> HashMap<u64, HashMap<Skill, i32>> {
         let markers = ecs.read_storage::<SimpleMarker<SerializeMe>>();
         let skills = ecs.read_storage::<Skills>();
-        (&markers, &skills).join().map(|(m, s)| (m.id(), s.skills.clone())).collect()
+        (&markers, &skills)
+            .join()
+            .map(|(m, s)| (m.id(), s.skills.clone()))
+            .collect()
     }
 
     #[test]
@@ -430,10 +510,16 @@ mod tests {
         assert_eq!(skills_by_marker(&src), skills_by_marker(&dst));
 
         let (m1, m2) = (src.fetch::<Map>(), dst.fetch::<Map>());
-        assert!(m1.tiles == m2.tiles && m1.revealed_tiles == m2.revealed_tiles
-            && m1.visible_tiles == m2.visible_tiles && m1.bloodstains == m2.bloodstains);
-        assert_eq!((m1.width, m1.height, m1.depth, &m1.name, m1.outdoors),
-                   (m2.width, m2.height, m2.depth, &m2.name, m2.outdoors));
+        assert!(
+            m1.tiles == m2.tiles
+                && m1.revealed_tiles == m2.revealed_tiles
+                && m1.visible_tiles == m2.visible_tiles
+                && m1.bloodstains == m2.bloodstains
+        );
+        assert_eq!(
+            (m1.width, m1.height, m1.depth, &m1.name, m1.outdoors),
+            (m2.width, m2.height, m2.depth, &m2.name, m2.outdoors)
+        );
         assert_eq!(m2.light.len(), m2.tiles.len());
         assert_eq!(m2.view_blocked.len(), m2.tiles.len());
         assert_eq!(*src.fetch::<Point>(), *dst.fetch::<Point>());
@@ -457,7 +543,12 @@ mod tests {
         flipped[mid] ^= 0x5a;
         let mut bad_version = good.clone();
         bad_version[4] = 99;
-        for bad in [flipped, bad_version, good[..good.len() / 2].to_vec(), b"{\"version\":1}".to_vec()] {
+        for bad in [
+            flipped,
+            bad_version,
+            good[..good.len() / 2].to_vec(),
+            b"{\"version\":1}".to_vec(),
+        ] {
             fs::write(&path, &bad).unwrap();
             assert!(load_game_from(&mut dst, &path).is_err());
             assert_eq!(dst.entities().join().count(), before);
@@ -470,15 +561,35 @@ mod tests {
         let _guard = serial();
         let mut ecs = played_world();
         let player = *ecs.fetch::<Entity>();
-        let victim = ecs.create_entity().marked::<SimpleMarker<SerializeMe>>().build();
-        let item = ecs.create_entity().marked::<SimpleMarker<SerializeMe>>()
-            .with(Name { name: "Lost Item".to_string() }).build();
-        let chaser = ecs.create_entity().marked::<SimpleMarker<SerializeMe>>()
+        let victim = ecs
+            .create_entity()
+            .marked::<SimpleMarker<SerializeMe>>()
+            .build();
+        let item = ecs
+            .create_entity()
+            .marked::<SimpleMarker<SerializeMe>>()
+            .with(Name {
+                name: "Lost Item".to_string(),
+            })
+            .build();
+        let chaser = ecs
+            .create_entity()
+            .marked::<SimpleMarker<SerializeMe>>()
             .with(Chasing { target: victim })
             .with(WantsToMelee { target: victim })
             .build();
-        ecs.write_storage::<InBackpack>().insert(item, InBackpack { owner: victim }).unwrap();
-        ecs.write_storage::<WantsToUseItem>().insert(player, WantsToUseItem { item: victim, target: None }).unwrap();
+        ecs.write_storage::<InBackpack>()
+            .insert(item, InBackpack { owner: victim })
+            .unwrap();
+        ecs.write_storage::<WantsToUseItem>()
+            .insert(
+                player,
+                WantsToUseItem {
+                    item: victim,
+                    target: None,
+                },
+            )
+            .unwrap();
         ecs.delete_entity(victim).unwrap();
 
         let bytes = encode_save(&ecs).unwrap();

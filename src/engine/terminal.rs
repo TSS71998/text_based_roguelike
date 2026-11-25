@@ -7,7 +7,7 @@
 //! - `Pixels`: a raw pixel buffer scaled into a screen rectangle (the first-person view).
 
 use super::color::{RGB, RGBA};
-use super::cp437::{to_cp437, FontCharType};
+use super::cp437::{FontCharType, to_cp437};
 use super::font::Font;
 use super::framebuffer::Framebuffer;
 use super::geom::{Point, PointF};
@@ -19,17 +19,28 @@ pub enum LayerKind {
     Simple,
     Sparse,
     Fancy,
-    Pixels {x: i32, y: i32, w: i32, h: i32, width: usize, height: usize }
+    Pixels {
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        width: usize,
+        height: usize,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Cell {
     glyph: FontCharType,
     fg: RGBA,
-    bg: RGBA
+    bg: RGBA,
 }
 
-const BLANK: Cell = Cell { glyph: 32, fg: RGBA::from_f32(1.0, 1.0, 1.0, 1.0), bg: RGBA::from_f32(0.0, 0.0, 0.0, 1.0) };
+const BLANK: Cell = Cell {
+    glyph: 32,
+    fg: RGBA::from_f32(1.0, 1.0, 1.0, 1.0),
+    bg: RGBA::from_f32(0.0, 0.0, 0.0, 1.0),
+};
 
 #[derive(Clone, Copy, Debug)]
 struct Sprite {
@@ -38,14 +49,21 @@ struct Sprite {
     scale: PointF,
     fg: RGBA,
     bg: RGBA,
-    glyph: FontCharType
+    glyph: FontCharType,
 }
 
 enum Layer {
     Simple(Vec<Cell>),
-    Sparse { cells: Vec<Option<Cell>>, used: Vec<usize> },
+    Sparse {
+        cells: Vec<Option<Cell>>,
+        used: Vec<usize>,
+    },
     Fancy(Vec<Sprite>),
-    Pixels { fb: Framebuffer, rect: (i32, i32, i32, i32), visible: bool }
+    Pixels {
+        fb: Framebuffer,
+        rect: (i32, i32, i32, i32),
+        visible: bool,
+    },
 }
 
 pub struct CtxBuilder {
@@ -56,12 +74,21 @@ pub struct CtxBuilder {
     title: String,
     font: Option<(&'static [u8], usize, usize)>,
     layers: Vec<LayerKind>,
-    scanlines: bool
+    scanlines: bool,
 }
 
 impl CtxBuilder {
     pub fn new(cols: i32, rows: i32) -> CtxBuilder {
-        CtxBuilder { cols, rows, cell_w: 8, cell_h: 8, title: String::new(), font: None, layers: Vec::new(), scanlines: false }
+        CtxBuilder {
+            cols,
+            rows,
+            cell_w: 8,
+            cell_h: 8,
+            title: String::new(),
+            font: None,
+            layers: Vec::new(),
+            scanlines: false,
+        }
     }
 
     pub fn with_tile_dimensions(mut self, w: usize, h: usize) -> Self {
@@ -80,7 +107,7 @@ impl CtxBuilder {
         self
     }
 
-    pub fn  with_layer(mut self, kind: LayerKind) -> Self {
+    pub fn with_layer(mut self, kind: LayerKind) -> Self {
         self.layers.push(kind);
         self
     }
@@ -96,18 +123,32 @@ impl CtxBuilder {
         font.prepare_cell_size(self.cell_w, self.cell_h);
         let n = (self.cols * self.rows) as usize;
         let (cw, ch) = (self.cell_w as i32, self.cell_h as i32);
-        let layers = self.layers.iter().map(|k| match *k {
-            LayerKind::Simple => Layer::Simple(vec![BLANK; n]),
-            LayerKind::Sparse => Layer::Sparse { cells: vec![None; n], used: Vec::new() },
-            LayerKind::Fancy => Layer::Fancy(Vec::new()),
-            LayerKind::Pixels { x, y, w, h, width, height } => Layer::Pixels {
-                fb: Framebuffer::new(width, height),
-                rect: (x * cw, y * ch, w * cw, h * ch),
-                visible: false
-            }
-        }).collect::<Vec<_>>();
+        let layers = self
+            .layers
+            .iter()
+            .map(|k| match *k {
+                LayerKind::Simple => Layer::Simple(vec![BLANK; n]),
+                LayerKind::Sparse => Layer::Sparse {
+                    cells: vec![None; n],
+                    used: Vec::new(),
+                },
+                LayerKind::Fancy => Layer::Fancy(Vec::new()),
+                LayerKind::Pixels {
+                    x,
+                    y,
+                    w,
+                    h,
+                    width,
+                    height,
+                } => Layer::Pixels {
+                    fb: Framebuffer::new(width, height),
+                    rect: (x * cw, y * ch, w * cw, h * ch),
+                    visible: false,
+                },
+            })
+            .collect::<Vec<_>>();
         if layers.is_empty() {
-            return Err("no layers given".into())
+            return Err("no layers given".into());
         }
         Ok(Ctx {
             title: self.title,
@@ -115,7 +156,10 @@ impl CtxBuilder {
             rows: self.rows,
             cell_w: self.cell_w,
             cell_h: self.cell_h,
-            screen: Framebuffer::new(self.cols as usize * self.cell_w, self.rows as usize * self.cell_h),
+            screen: Framebuffer::new(
+                self.cols as usize * self.cell_w,
+                self.rows as usize * self.cell_h,
+            ),
             font,
             layers,
             active: 0,
@@ -128,7 +172,7 @@ impl CtxBuilder {
             mouse_px: (0, 0),
             left_click: false,
             frame_time_ms: 0.0,
-            quitting: false
+            quitting: false,
         })
     }
 }
@@ -153,7 +197,7 @@ pub struct Ctx {
     pub mouse_px: (i32, i32),
     pub left_click: bool,
     pub frame_time_ms: f32,
-    pub quitting: bool
+    pub quitting: bool,
 }
 
 impl Ctx {
@@ -187,7 +231,7 @@ impl Ctx {
     pub fn pixels_mut(&mut self, layer: usize) -> Option<&mut Framebuffer> {
         match self.layers.get_mut(layer) {
             Some(Layer::Pixels { fb, .. }) => Some(fb),
-            _ => None
+            _ => None,
         }
     }
 
@@ -216,50 +260,147 @@ impl Ctx {
                 scale: PointF::new(1.0, 1.0),
                 fg: cell.fg,
                 bg: cell.bg,
-                glyph: cell.glyph
+                glyph: cell.glyph,
             }),
             Layer::Pixels { .. } => {}
         }
     }
 
-    pub fn set(&mut self, x: i32, y: i32, fg: impl Into<RGBA>, bg: impl Into<RGBA>, glyph: FontCharType) {
-        self.put_cell(x, y, Cell { glyph, fg: fg.into(), bg: bg.into() });
+    pub fn set(
+        &mut self,
+        x: i32,
+        y: i32,
+        fg: impl Into<RGBA>,
+        bg: impl Into<RGBA>,
+        glyph: FontCharType,
+    ) {
+        self.put_cell(
+            x,
+            y,
+            Cell {
+                glyph,
+                fg: fg.into(),
+                bg: bg.into(),
+            },
+        );
     }
- 
+
     pub fn set_bg(&mut self, x: i32, y: i32, bg: impl Into<RGBA>) {
-        self.put_cell(x, y, Cell { glyph: 32, fg: RGBA::from_f32(0.0, 0.0, 0.0, 0.0), bg: bg.into() });
+        self.put_cell(
+            x,
+            y,
+            Cell {
+                glyph: 32,
+                fg: RGBA::from_f32(0.0, 0.0, 0.0, 0.0),
+                bg: bg.into(),
+            },
+        );
     }
- 
-    pub fn set_fancy(&mut self, pos: PointF, z: i32, scale: PointF, fg: impl Into<RGBA>, bg: impl Into<RGBA>, glyph: FontCharType) {
+
+    pub fn set_fancy(
+        &mut self,
+        pos: PointF,
+        z: i32,
+        scale: PointF,
+        fg: impl Into<RGBA>,
+        bg: impl Into<RGBA>,
+        glyph: FontCharType,
+    ) {
         if let Layer::Fancy(sprites) = &mut self.layers[self.active] {
-            sprites.push(Sprite { pos, z, scale, fg: fg.into(), bg: bg.into(), glyph });
+            sprites.push(Sprite {
+                pos,
+                z,
+                scale,
+                fg: fg.into(),
+                bg: bg.into(),
+                glyph,
+            });
         }
     }
- 
+
     pub fn print(&mut self, x: i32, y: i32, text: impl AsRef<str>) {
-        self.print_color(x, y, RGB::from_f32(1.0, 1.0, 1.0), RGB::from_f32(0.0, 0.0, 0.0), text);
+        self.print_color(
+            x,
+            y,
+            RGB::from_f32(1.0, 1.0, 1.0),
+            RGB::from_f32(0.0, 0.0, 0.0),
+            text,
+        );
     }
- 
-    pub fn print_color(&mut self, x: i32, y: i32, fg: impl Into<RGBA>, bg: impl Into<RGBA>, text: impl AsRef<str>) {
+
+    pub fn print_color(
+        &mut self,
+        x: i32,
+        y: i32,
+        fg: impl Into<RGBA>,
+        bg: impl Into<RGBA>,
+        text: impl AsRef<str>,
+    ) {
         let (fg, bg) = (fg.into(), bg.into());
         for (i, c) in text.as_ref().chars().enumerate() {
-            self.put_cell(x + i as i32, y, Cell { glyph: to_cp437(c), fg, bg });
+            self.put_cell(
+                x + i as i32,
+                y,
+                Cell {
+                    glyph: to_cp437(c),
+                    fg,
+                    bg,
+                },
+            );
         }
     }
- 
-    pub fn print_color_centered(&mut self, y: i32, fg: impl Into<RGBA>, bg: impl Into<RGBA>, text: impl AsRef<str>) {
+
+    pub fn print_color_centered(
+        &mut self,
+        y: i32,
+        fg: impl Into<RGBA>,
+        bg: impl Into<RGBA>,
+        text: impl AsRef<str>,
+    ) {
         let len = text.as_ref().chars().count() as i32;
         self.print_color(self.cols / 2 - len / 2, y, fg, bg, text);
     }
 
-    pub fn draw_box(&mut self, x: i32, y: i32, w: i32, h: i32, fg: impl Into<RGBA>, bg: impl Into<RGBA>) {
-        self.draw_box_with(x, y, w, h, fg.into(), bg.into(), ['┌', '┐', '└', '┘', '─', '│']);
+    pub fn draw_box(
+        &mut self,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        fg: impl Into<RGBA>,
+        bg: impl Into<RGBA>,
+    ) {
+        self.draw_box_with(
+            x,
+            y,
+            w,
+            h,
+            fg.into(),
+            bg.into(),
+            ['┌', '┐', '└', '┘', '─', '│'],
+        );
     }
- 
-    pub fn draw_box_double(&mut self, x: i32, y: i32, w: i32, h: i32, fg: impl Into<RGBA>, bg: impl Into<RGBA>) {
-        self.draw_box_with(x, y, w, h, fg.into(), bg.into(), ['╔', '╗', '╚', '╝', '═', '║']);
+
+    pub fn draw_box_double(
+        &mut self,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        fg: impl Into<RGBA>,
+        bg: impl Into<RGBA>,
+    ) {
+        self.draw_box_with(
+            x,
+            y,
+            w,
+            h,
+            fg.into(),
+            bg.into(),
+            ['╔', '╗', '╚', '╝', '═', '║'],
+        );
     }
- 
+
     #[allow(clippy::too_many_arguments)]
     fn draw_box_with(&mut self, x: i32, y: i32, w: i32, h: i32, fg: RGBA, bg: RGBA, c: [char; 6]) {
         for cy in y..=y + h {
@@ -267,7 +408,17 @@ impl Ctx {
                 self.put_cell(cx, cy, Cell { glyph: 32, fg, bg });
             }
         }
-        let mut put = |cx, cy, ch| self.put_cell(cx, cy, Cell { glyph: to_cp437(ch), fg, bg });
+        let mut put = |cx, cy, ch| {
+            self.put_cell(
+                cx,
+                cy,
+                Cell {
+                    glyph: to_cp437(ch),
+                    fg,
+                    bg,
+                },
+            )
+        };
         for cx in x + 1..x + w {
             put(cx, y, c[4]);
             put(cx, y + h, c[4]);
@@ -283,9 +434,22 @@ impl Ctx {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_bar_horizontal(&mut self, x: i32, y: i32, width: i32, n: i32, max: i32, fg: impl Into<RGBA>, bg: impl Into<RGBA>) {
+    pub fn draw_bar_horizontal(
+        &mut self,
+        x: i32,
+        y: i32,
+        width: i32,
+        n: i32,
+        max: i32,
+        fg: impl Into<RGBA>,
+        bg: impl Into<RGBA>,
+    ) {
         let (fg, bg) = (fg.into(), bg.into());
-        let filled = if max > 0 { (n as f32 / max as f32 * width as f32) as i32 } else { 0 };
+        let filled = if max > 0 {
+            (n as f32 / max as f32 * width as f32) as i32
+        } else {
+            0
+        };
         for i in 0..width {
             let glyph = to_cp437(if i <= filled { '▓' } else { '░' });
             self.put_cell(x + i, y, Cell { glyph, fg, bg });
@@ -298,7 +462,13 @@ impl Ctx {
                 for cx in 0..layer.width {
                     let cell = layer.get(cx, cy).unwrap();
                     if !cell.bg.is_transparent() {
-                        self.set(x + cx as i32, y + cy as i32, cell.fg.to_rgb(), cell.bg.to_rgb(), cell.ch as FontCharType);
+                        self.set(
+                            x + cx as i32,
+                            y + cy as i32,
+                            cell.fg.to_rgb(),
+                            cell.bg.to_rgb(),
+                            cell.ch as FontCharType,
+                        );
                     }
                 }
             }
@@ -306,7 +476,10 @@ impl Ctx {
     }
 
     pub fn mouse_pos(&self) -> (i32, i32) {
-        (self.mouse_px.0 / self.cell_w as i32, self.mouse_px.1 / self.cell_h as i32)
+        (
+            self.mouse_px.0 / self.cell_w as i32,
+            self.mouse_px.1 / self.cell_h as i32,
+        )
     }
 
     pub fn mouse_point(&self) -> Point {
@@ -330,7 +503,14 @@ impl Ctx {
                         let blank = (c.glyph == 32 || c.glyph == 0) && c.bg == BLANK.bg;
                         if !blank {
                             let (x, y) = ((i % cols) as i32, (i / cols) as i32);
-                            self.font.draw_cell(&mut self.screen, x * cw, y * ch, c.glyph, c.fg, c.bg);
+                            self.font.draw_cell(
+                                &mut self.screen,
+                                x * cw,
+                                y * ch,
+                                c.glyph,
+                                c.fg,
+                                c.bg,
+                            );
                         }
                     }
                 }
@@ -338,7 +518,14 @@ impl Ctx {
                     for &i in used.iter() {
                         if let Some(c) = cells[i] {
                             let (x, y) = ((i % cols) as i32, (i / cols) as i32);
-                            self.font.draw_cell(&mut self.screen, x * cw, y * ch, c.glyph, c.fg, c.bg);
+                            self.font.draw_cell(
+                                &mut self.screen,
+                                x * cw,
+                                y * ch,
+                                c.glyph,
+                                c.fg,
+                                c.bg,
+                            );
                         }
                     }
                 }
@@ -348,12 +535,13 @@ impl Ctx {
                         let (w, h) = (cw as f32 * s.scale.x, ch as f32 * s.scale.y);
                         let x = s.pos.x * cw as f32 + (cw as f32 - w) / 2.0;
                         let y = s.pos.y * ch as f32 + (ch as f32 - h) / 2.0;
-                        self.font.draw_scaled(&mut self.screen, x, y, w, h, s.glyph, s.fg, s.bg);
+                        self.font
+                            .draw_scaled(&mut self.screen, x, y, w, h, s.glyph, s.fg, s.bg);
                     }
                 }
                 Layer::Pixels { fb, rect, visible } => {
                     if *visible {
-                        self.screen.blit_scaled(fb, rect.0,  rect.1,  rect.2,  rect.3);
+                        self.screen.blit_scaled(fb, rect.0, rect.1, rect.2, rect.3);
                         pixel_rect = Some(*rect);
                     }
                 }
@@ -374,19 +562,26 @@ impl Ctx {
 mod tests {
     use super::*;
     use crate::engine::color::{BLACK, WHITE, YELLOW};
- 
+
     fn ctx() -> Ctx {
         CtxBuilder::new(10, 4)
             .with_tile_dimensions(16, 16)
             .with_font(include_bytes!("../../resources/terminal8x8.png"), 8, 8)
             .with_layer(LayerKind::Simple)
-            .with_layer(LayerKind::Pixels { x: 0, y: 0, w: 2, h: 1, width: 4, height: 2 })
+            .with_layer(LayerKind::Pixels {
+                x: 0,
+                y: 0,
+                w: 2,
+                h: 1,
+                width: 4,
+                height: 2,
+            })
             .with_layer(LayerKind::Fancy)
             .with_layer(LayerKind::Sparse)
             .build()
             .unwrap()
     }
- 
+
     #[test]
     fn layers_composite_in_order() {
         let mut c = ctx();
@@ -395,15 +590,28 @@ mod tests {
         c.set_active_console(3);
         c.print_color(1, 0, RGB::named(YELLOW), RGB::named(BLACK), "@");
         c.set_active_console(2);
-        c.set_fancy(PointF::new(3.5, 0.0), 1, PointF::new(1.0, 1.0), RGB::named(WHITE), RGBA::from_f32(0.0, 0.0, 0.0, 0.0), to_cp437('o'));
+        c.set_fancy(
+            PointF::new(3.5, 0.0),
+            1,
+            PointF::new(1.0, 1.0),
+            RGB::named(WHITE),
+            RGBA::from_f32(0.0, 0.0, 0.0, 0.0),
+            to_cp437('o'),
+        );
         let lit = |c: &mut Ctx, x0: i32, x1: i32, color: u32| {
             let s = c.render();
-            (x0..x1).flat_map(|x| (0..16).map(move |y| (x, y))).filter(|&(x, y)| s.get(x, y) == color).count()
+            (x0..x1)
+                .flat_map(|x| (0..16).map(move |y| (x, y)))
+                .filter(|&(x, y)| s.get(x, y) == color)
+                .count()
         };
         assert!(lit(&mut c, 0, 16, 0xFFFFFF) > 10, "'#' drawn in white");
         assert!(lit(&mut c, 16, 32, 0xFFFF00) > 10, "'@' drawn in yellow");
-        assert!(lit(&mut c, 56, 72, 0xFFFFFF) > 5, "fancy 'o' drawn at x = 3.5 cells");
- 
+        assert!(
+            lit(&mut c, 56, 72, 0xFFFFFF) > 5,
+            "fancy 'o' drawn at x = 3.5 cells"
+        );
+
         // A visible pixel layer covers what's below it.
         c.pixels_mut(1).unwrap().clear(0x0000FF);
         c.set_layer_visible(1, true);
@@ -411,7 +619,7 @@ mod tests {
         // ...but the sparse UI layer still draws on top.
         assert!(lit(&mut c, 16, 32, 0xFFFF00) > 10);
     }
- 
+
     #[test]
     fn box_matches_rltk_extents() {
         let mut c = ctx();
@@ -422,7 +630,7 @@ mod tests {
         assert!((48..64).any(|x| s.get(x, 24) == 0xFFFFFF));
         assert!((64..80).all(|x| s.get(x, 24) == 0));
     }
- 
+
     #[test]
     fn sparse_cls_only_clears_used_cells() {
         let mut c = ctx();
@@ -432,11 +640,11 @@ mod tests {
         assert!(c.render().pixels.iter().all(|&p| p == 0));
     }
 }
- 
+
 #[cfg(test)]
 mod bench {
     use super::*;
- 
+
     /// `cargo test --release frame_cost -- --ignored --nocapture`
     #[test]
     #[ignore]
@@ -445,7 +653,14 @@ mod bench {
             .with_tile_dimensions(16, 16)
             .with_font(include_bytes!("../../resources/terminal8x8.png"), 8, 8)
             .with_layer(LayerKind::Simple)
-            .with_layer(LayerKind::Pixels { x: 1, y: 1, w: 48, h: 44, width: 384, height: 352 })
+            .with_layer(LayerKind::Pixels {
+                x: 1,
+                y: 1,
+                w: 48,
+                h: 44,
+                width: 384,
+                height: 352,
+            })
             .with_layer(LayerKind::Fancy)
             .with_layer(LayerKind::Sparse)
             .with_scanlines(true)
@@ -456,30 +671,64 @@ mod bench {
             c.cls();
             for y in 0..45 {
                 for x in 0..49 {
-                    c.set_fancy(PointF::new(x as f32 - 0.3, y as f32 + 0.6), 0, PointF::new(1.0, 1.0),
-                        RGB::from_f32(0.7, 0.7, 0.7), RGB::from_f32(0.1, 0.0, 0.0), to_cp437('#'));
+                    c.set_fancy(
+                        PointF::new(x as f32 - 0.3, y as f32 + 0.6),
+                        0,
+                        PointF::new(1.0, 1.0),
+                        RGB::from_f32(0.7, 0.7, 0.7),
+                        RGB::from_f32(0.1, 0.0, 0.0),
+                        to_cp437('#'),
+                    );
                 }
             }
             c.set_active_console(3);
             c.cls();
-            c.draw_box(0, 0, 79, 59, RGB::from_f32(0.6, 0.6, 0.6), RGB::from_f32(0.0, 0.0, 0.0));
-            for y in 46..58 { c.print(2, y, "Patron says \"Quiet down, it's too early!\""); }
+            c.draw_box(
+                0,
+                0,
+                79,
+                59,
+                RGB::from_f32(0.6, 0.6, 0.6),
+                RGB::from_f32(0.0, 0.0, 0.0),
+            );
+            for y in 46..58 {
+                c.print(2, y, "Patron says \"Quiet down, it's too early!\"");
+            }
             c.set_layer_visible(1, pixels);
             c.render();
         };
-        c.set_active_console(2); c.cls(); c.set_active_console(3); c.cls();
+        c.set_active_console(2);
+        c.cls();
+        c.set_active_console(3);
+        c.cls();
         let start = std::time::Instant::now();
-        for _ in 0..100 { c.render(); }
-        println!("empty frame (clear + CRT): {:.2} ms", start.elapsed().as_secs_f64() * 10.0);
+        for _ in 0..100 {
+            c.render();
+        }
+        println!(
+            "empty frame (clear + CRT): {:.2} ms",
+            start.elapsed().as_secs_f64() * 10.0
+        );
         c.scanlines = false;
         let start = std::time::Instant::now();
-        for _ in 0..100 { frame(&mut c, false); }
-        println!("busy frame without CRT: {:.2} ms", start.elapsed().as_secs_f64() * 10.0);
+        for _ in 0..100 {
+            frame(&mut c, false);
+        }
+        println!(
+            "busy frame without CRT: {:.2} ms",
+            start.elapsed().as_secs_f64() * 10.0
+        );
         c.scanlines = true;
         for pixels in [false, true] {
             let start = std::time::Instant::now();
-            for _ in 0..100 { frame(&mut c, pixels); }
-            println!("frame (3D layer {}): {:.2} ms", if pixels { "on" } else { "off" }, start.elapsed().as_secs_f64() * 10.0);
+            for _ in 0..100 {
+                frame(&mut c, pixels);
+            }
+            println!(
+                "frame (3D layer {}): {:.2} ms",
+                if pixels { "on" } else { "off" },
+                start.elapsed().as_secs_f64() * 10.0
+            );
         }
     }
 }

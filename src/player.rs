@@ -1,10 +1,12 @@
 use crate::engine::{Ctx, Direction, Point};
+use crate::{Facing, Faction, actions::Action, raws::Reaction, render::ViewMode};
 use specs::prelude::*;
-use crate::{Facing, Faction, raws::Reaction, actions::Action, render::ViewMode};
 
-use super::{Position, Player, Map, State, Viewshed, RunState, Pools, WantsToMelee, gamelog::GameLog, Item, 
-            WantsToPickupItem, TileType, HungerClock, HungerState, EntityMoved, BlocksTile,
-            BlocksVisibility, Renderable, Door, Attributes};
+use super::{
+    Attributes, BlocksTile, BlocksVisibility, Door, EntityMoved, HungerClock, HungerState, Item,
+    Map, Player, Pools, Position, Renderable, RunState, State, TileType, Viewshed, WantsToMelee,
+    WantsToPickupItem, gamelog::GameLog,
+};
 use std::cmp::{max, min};
 
 pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) -> RunState {
@@ -23,62 +25,86 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) -> RunState 
     let factions = ecs.read_storage::<Faction>();
     let mut result = RunState::AwaitingInput;
 
-    let mut swap_entities : Vec<(Entity, i32, i32)> = Vec::new();
+    let mut swap_entities: Vec<(Entity, i32, i32)> = Vec::new();
 
-    for (entity, _player, pos, viewshed) in (&entities, &players, &mut positions, &mut viewsheds).join() {
-        if pos.x + delta_x < 1 || pos.x + delta_x > map.width-1 || pos.y + delta_y < 1 || pos.y + delta_y > map.height-1 { return RunState::AwaitingInput; }
+    for (entity, _player, pos, viewshed) in
+        (&entities, &players, &mut positions, &mut viewsheds).join()
+    {
+        if pos.x + delta_x < 1
+            || pos.x + delta_x > map.width - 1
+            || pos.y + delta_y < 1
+            || pos.y + delta_y > map.height - 1
+        {
+            return RunState::AwaitingInput;
+        }
         let destination_idx = map.xy_idx(pos.x + delta_x, pos.y + delta_y);
 
-        result = crate::spatial::for_each_tile_content_with_gamemode(destination_idx, |potential_target| {
-            let mut hostile = true;
-            if combat_stats.get(potential_target).is_some() {
-                if let Some(faction) = factions.get(potential_target) {
-                    let reaction = crate::raws::faction_reaction(
-                        &faction.name,
-                        "Player",
-                        &crate::raws::RAWS.lock().unwrap()
-                    );
-                    if reaction != Reaction::Attack { hostile = false; }
+        result = crate::spatial::for_each_tile_content_with_gamemode(
+            destination_idx,
+            |potential_target| {
+                let mut hostile = true;
+                if combat_stats.get(potential_target).is_some() {
+                    if let Some(faction) = factions.get(potential_target) {
+                        let reaction = crate::raws::faction_reaction(
+                            &faction.name,
+                            "Player",
+                            &crate::raws::RAWS.lock().unwrap(),
+                        );
+                        if reaction != Reaction::Attack {
+                            hostile = false;
+                        }
+                    }
                 }
-            }
-            if !hostile {
-                swap_entities.push((potential_target, pos.x, pos.y));
+                if !hostile {
+                    swap_entities.push((potential_target, pos.x, pos.y));
 
-                pos.x = min(map.width-1 , max(0, pos.x + delta_x));
-                pos.y = min(map.height-1, max(0, pos.y + delta_y));
-                entity_moved.insert(entity, EntityMoved{}).expect("Unable to insert marker");
+                    pos.x = min(map.width - 1, max(0, pos.x + delta_x));
+                    pos.y = min(map.height - 1, max(0, pos.y + delta_y));
+                    entity_moved
+                        .insert(entity, EntityMoved {})
+                        .expect("Unable to insert marker");
 
-                viewshed.dirty = true;
-                let mut ppos = ecs.write_resource::<Point>();
-                ppos.x = pos.x;
-                ppos.y = pos.y;
-                return Some(RunState::Ticking);
-            } else {
-                let target = combat_stats.get(potential_target);
-                if let Some(_target) = target {
-                    wants_to_melee.insert(entity, WantsToMelee{ target: potential_target }).expect("Add target failed");
+                    viewshed.dirty = true;
+                    let mut ppos = ecs.write_resource::<Point>();
+                    ppos.x = pos.x;
+                    ppos.y = pos.y;
+                    return Some(RunState::Ticking);
+                } else {
+                    let target = combat_stats.get(potential_target);
+                    if let Some(_target) = target {
+                        wants_to_melee
+                            .insert(
+                                entity,
+                                WantsToMelee {
+                                    target: potential_target,
+                                },
+                            )
+                            .expect("Add target failed");
+                        return Some(RunState::Ticking);
+                    }
+                }
+                let door = doors.get_mut(potential_target);
+                if let Some(door) = door {
+                    door.open = true;
+                    blocks_visibility.remove(potential_target);
+                    blocks_movement.remove(potential_target);
+                    let glyph = renderables.get_mut(potential_target).unwrap();
+                    glyph.glyph = crate::engine::to_cp437('/');
+                    viewshed.dirty = true;
                     return Some(RunState::Ticking);
                 }
-            }
-            let door = doors.get_mut(potential_target);
-            if let Some(door) = door {
-                door.open = true;
-                blocks_visibility.remove(potential_target);
-                blocks_movement.remove(potential_target);
-                let glyph = renderables.get_mut(potential_target).unwrap();
-                glyph.glyph = crate::engine::to_cp437('/');
-                viewshed.dirty = true;
-                return Some(RunState::Ticking);
-            }
-            None
-        });
+                None
+            },
+        );
 
         if !crate::spatial::is_blocked(destination_idx) {
             let old_idx = map.xy_idx(pos.x, pos.y);
-            pos.x = min(map.width-1 , max(0, pos.x + delta_x));
-            pos.y = min(map.height-1, max(0, pos.y + delta_y));
+            pos.x = min(map.width - 1, max(0, pos.x + delta_x));
+            pos.y = min(map.height - 1, max(0, pos.y + delta_y));
             let new_idx = map.xy_idx(pos.x, pos.y);
-            entity_moved.insert(entity, EntityMoved{}).expect("Unable to insert marker");
+            entity_moved
+                .insert(entity, EntityMoved {})
+                .expect("Unable to insert marker");
             crate::spatial::move_entity(entity, old_idx, new_idx);
 
             viewshed.dirty = true;
@@ -125,13 +151,23 @@ fn get_item(ecs: &mut World) {
     }
 
     match target_item {
-        None => gamelog.entries.push("There is nothing to pick up here.".to_string()),
+        None => gamelog
+            .entries
+            .push("There is nothing to pick up here.".to_string()),
         Some(item) => {
             let mut pickup = ecs.write_storage::<WantsToPickupItem>();
-            pickup.insert(*player_entity, WantsToPickupItem { collected_by: *player_entity, item }).expect("Unable to pickup item");
+            pickup
+                .insert(
+                    *player_entity,
+                    WantsToPickupItem {
+                        collected_by: *player_entity,
+                        item,
+                    },
+                )
+                .expect("Unable to pickup item");
         }
     }
-} 
+}
 
 pub fn try_next_level(ecs: &mut World) -> bool {
     let player_pos = ecs.fetch::<Point>();
@@ -141,7 +177,9 @@ pub fn try_next_level(ecs: &mut World) -> bool {
         true
     } else {
         let mut gamelog = ecs.fetch_mut::<GameLog>();
-        gamelog.entries.push("There is no way down from here".to_string());
+        gamelog
+            .entries
+            .push("There is no way down from here".to_string());
         false
     }
 }
@@ -154,12 +192,14 @@ pub fn try_previous_level(ecs: &mut World) -> bool {
         true
     } else {
         let mut gamelog = ecs.fetch_mut::<GameLog>();
-        gamelog.entries.push("There is no way up from here".to_string());
+        gamelog
+            .entries
+            .push("There is no way up from here".to_string());
         false
     }
 }
 
-fn skip_turn(ecs: &mut World) ->RunState {
+fn skip_turn(ecs: &mut World) -> RunState {
     let player_entity = ecs.fetch::<Entity>();
     let viewshed_components = ecs.read_storage::<Viewshed>();
     let factions = ecs.read_storage::<Faction>();
@@ -173,12 +213,12 @@ fn skip_turn(ecs: &mut World) ->RunState {
         crate::spatial::for_each_tile_content(idx, |entity_id| {
             let faction = factions.get(entity_id);
             match faction {
-                None => {},
+                None => {}
                 Some(faction) => {
                     let reaction = crate::raws::faction_reaction(
                         &faction.name,
-                        "Player", 
-                        &crate::raws::RAWS.lock().unwrap()
+                        "Player",
+                        &crate::raws::RAWS.lock().unwrap(),
                     );
                     if reaction == Reaction::Attack {
                         can_heal = false;
@@ -222,28 +262,47 @@ fn use_consumable_hotkey(gs: &mut State, key: i32) -> RunState {
 
     if (key as usize) < carried_consumables.len() {
         use crate::components::Ranged;
-        if let Some(ranged) = gs.ecs.read_storage::<Ranged>().get(carried_consumables[key as usize]) {
-            return RunState::ShowTargeting { range: ranged.range, item: carried_consumables[key as usize] };
+        if let Some(ranged) = gs
+            .ecs
+            .read_storage::<Ranged>()
+            .get(carried_consumables[key as usize])
+        {
+            return RunState::ShowTargeting {
+                range: ranged.range,
+                item: carried_consumables[key as usize],
+            };
         }
         let mut intent = gs.ecs.write_storage::<WantsToUseItem>();
-        intent.insert(*player_entity, WantsToUseItem { item: carried_consumables[key as usize], target: None }).expect("Unable to insert intent");
+        intent
+            .insert(
+                *player_entity,
+                WantsToUseItem {
+                    item: carried_consumables[key as usize],
+                    target: None,
+                },
+            )
+            .expect("Unable to insert intent");
         return RunState::Ticking;
     }
     RunState::Ticking
 }
 
-pub fn player_input(gs: &mut State, ctx: &mut Ctx) -> RunState{
-    let Some(key) = ctx.key else { return RunState::AwaitingInput };
+pub fn player_input(gs: &mut State, ctx: &mut Ctx) -> RunState {
+    let Some(key) = ctx.key else {
+        return RunState::AwaitingInput;
+    };
     let view = crate::render::effective_view(&gs.ecs);
     match crate::actions::action_for_key(key, view) {
         Some(action) => perform(gs, action),
-        None => RunState::AwaitingInput
+        None => RunState::AwaitingInput,
     }
 }
 
 fn player_facing(ecs: &World) -> Direction {
     let player = *ecs.fetch::<Entity>();
-    ecs.read_storage::<Facing>().get(player).map_or(Direction::North, |f| f.dir)
+    ecs.read_storage::<Facing>()
+        .get(player)
+        .map_or(Direction::North, |f| f.dir)
 }
 
 fn set_player_facing(ecs: &mut World, dir: Direction) {
@@ -287,9 +346,19 @@ fn perform(gs: &mut State, action: Action) -> RunState {
         Action::SaveAndQuit => RunState::SaveGame,
         Action::CheatMenu => RunState::ShowCheatMenu,
         Action::Wait => skip_turn(&mut gs.ecs),
-        Action::Descend => if try_next_level(&mut gs.ecs) { RunState::NextLevel } else { RunState::Ticking },
-        Action::Ascend => if try_previous_level(&mut gs.ecs) { RunState::PreviousLevel } else { RunState::Ticking },
+        Action::Descend => {
+            if try_next_level(&mut gs.ecs) {
+                RunState::NextLevel
+            } else {
+                RunState::Ticking
+            }
+        }
+        Action::Ascend => {
+            if try_previous_level(&mut gs.ecs) {
+                RunState::PreviousLevel
+            } else {
+                RunState::Ticking
+            }
+        }
     }
 }
-
-

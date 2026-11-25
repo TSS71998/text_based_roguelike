@@ -8,7 +8,7 @@ pub struct Solver {
     chunks_x: usize,
     chunks_y: usize,
     remaining: Vec<(usize, i32)>,
-    pub possible: bool
+    pub possible: bool,
 }
 
 impl Solver {
@@ -16,17 +16,18 @@ impl Solver {
         let chunks_x = (map.width / chunk_size) as usize;
         let chunks_y = (map.height / chunk_size) as usize;
         let mut remaining: Vec<(usize, i32)> = Vec::new();
-        for i in 0 .. (chunks_x * chunks_y) {
+        for i in 0..(chunks_x * chunks_y) {
             remaining.push((i, 0));
         }
 
-        Solver { constraints,
+        Solver {
+            constraints,
             chunk_size,
             chunks: vec![None; chunks_x * chunks_y],
             chunks_x,
             chunks_y,
             remaining,
-            possible: true
+            possible: true,
         }
     }
 
@@ -80,7 +81,9 @@ impl Solver {
     }
 
     pub fn iteration(&mut self, map: &mut Map, rng: &mut super::RandomNumberGenerator) -> bool {
-        if self.remaining.is_empty() {return true;}
+        if self.remaining.is_empty() {
+            return true;
+        }
 
         let mut remain_copy = self.remaining.clone();
         let mut neighbors_exist = false;
@@ -89,10 +92,12 @@ impl Solver {
             let chunk_x = idx % self.chunks_x;
             let chunk_y = idx / self.chunks_x;
             let neighbor_count = self.count_neighbors(chunk_x, chunk_y);
-            if neighbor_count > 0 {neighbors_exist = true;}
+            if neighbor_count > 0 {
+                neighbors_exist = true;
+            }
             *r = (r.0, neighbor_count);
         }
-        remain_copy.sort_by(|a,b| b.1.cmp(&a.1));
+        remain_copy.sort_by(|a, b| b.1.cmp(&a.1));
         self.remaining = remain_copy;
 
         let remain_index = if !neighbors_exist {
@@ -163,8 +168,8 @@ impl Solver {
             let bottom_y = (chunk_y as i32 + 1) * self.chunk_size as i32;
 
             let mut i: usize = 0;
-            for y in top_y .. bottom_y {
-                for x in left_x .. right_x {
+            for y in top_y..bottom_y {
+                for x in left_x..right_x {
                     let mapidx = map.xy_idx(x, y);
                     let tile = self.constraints[new_chunk_idx].pattern[i];
                     map.tiles[mapidx] = tile;
@@ -183,7 +188,9 @@ impl Solver {
             for new_chunk_idx in options_to_check.iter() {
                 let mut possible = true;
                 for o in options.iter() {
-                    if !o.contains(new_chunk_idx) {possible = false;}
+                    if !o.contains(new_chunk_idx) {
+                        possible = false;
+                    }
                 }
                 if possible {
                     possible_options.push(*new_chunk_idx);
@@ -195,8 +202,11 @@ impl Solver {
                 self.possible = false;
                 return true;
             } else {
-                let new_chunk_idx = if possible_options.len() == 1 {0}
-                    else {rng.roll_dice(1, possible_options.len() as i32) - 1};
+                let new_chunk_idx = if possible_options.len() == 1 {
+                    0
+                } else {
+                    rng.roll_dice(1, possible_options.len() as i32) - 1
+                };
 
                 self.chunks[chunk_index] = Some(new_chunk_idx as usize);
                 let left_x = chunk_x as i32 * self.chunk_size as i32;
@@ -205,16 +215,16 @@ impl Solver {
                 let bottom_y = (chunk_y as i32 + 1) * self.chunk_size as i32;
 
                 let mut i: usize = 0;
-                for y in top_y .. bottom_y {
-                    for x in left_x .. right_x {
+                for y in top_y..bottom_y {
+                    for x in left_x..right_x {
                         let mapidx = map.xy_idx(x, y);
-                        let tile = self.constraints[new_chunk_idx  as usize].pattern[i];
+                        let tile = self.constraints[new_chunk_idx as usize].pattern[i];
                         map.tiles[mapidx] = tile;
                         i += 1;
                     }
                 }
             }
-        }  
+        }
 
         false
     }

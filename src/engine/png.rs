@@ -4,7 +4,7 @@
 pub struct Image {
     pub width: usize,
     pub height: usize,
-    pub rgba: Vec<u8>
+    pub rgba: Vec<u8>,
 }
 
 const SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n'];
@@ -17,7 +17,8 @@ pub fn decode(data: &[u8]) -> Result<Image, String> {
     if data.len() < 8 || data[..8] != SIGNATURE {
         return Err("not a PNG file".into());
     }
-    let (mut width, mut height, mut depth, mut color, mut interlace) = (0usize, 0usize, 0u8, 0u8, 0u8);
+    let (mut width, mut height, mut depth, mut color, mut interlace) =
+        (0usize, 0usize, 0u8, 0u8, 0u8);
     let (mut palette, mut trns, mut idat) = (Vec::new(), Vec::new(), Vec::new());
     let mut pos = 8;
     while pos + 12 <= data.len() {
@@ -58,7 +59,8 @@ pub fn decode(data: &[u8]) -> Result<Image, String> {
         return Err("bad PNG dimensions".into());
     }
 
-    let raw = miniz_oxide::inflate::decompress_to_vec_zlib(&idat).map_err(|e| format!("PNG data: {:?}", e.to_string()))?;
+    let raw = miniz_oxide::inflate::decompress_to_vec_zlib(&idat)
+        .map_err(|e| format!("PNG data: {:?}", e.to_string()))?;
     let bits_pp = channels * depth as usize;
     let stride = (width * bits_pp).div_ceil(8);
     let bpp = (bits_pp / 8).max(1);
@@ -71,12 +73,20 @@ pub fn decode(data: &[u8]) -> Result<Image, String> {
         let filter = raw[y * (stride + 1)];
         let src = &raw[y * (stride + 1) + 1..(y + 1) * (stride + 1)];
         let (done, rest) = pixels.split_at_mut(y * stride);
-        let prev = if y > 0 { &done[(y - 1) * stride..] } else { &[][..] };
+        let prev = if y > 0 {
+            &done[(y - 1) * stride..]
+        } else {
+            &[][..]
+        };
         let row = &mut rest[..stride];
         for x in 0..stride {
             let a = if x >= bpp { row[x - bpp] as i32 } else { 0 };
             let b = prev.get(x).copied().unwrap_or(0) as i32;
-            let c = if x >= bpp { prev.get(x - bpp).copied().unwrap_or(0) as i32 } else { 0 };
+            let c = if x >= bpp {
+                prev.get(x - bpp).copied().unwrap_or(0) as i32
+            } else {
+                0
+            };
             let predicted = match filter {
                 0 => 0,
                 1 => a,
@@ -85,11 +95,17 @@ pub fn decode(data: &[u8]) -> Result<Image, String> {
                 4 => {
                     let p = a + b - c;
                     let (pa, pb, pc) = ((p - a).abs(), (p - b).abs(), (p - c).abs());
-                    if pa <= pb && pa <= pc { a } else if pb <= pc { b } else { c }
+                    if pa <= pb && pa <= pc {
+                        a
+                    } else if pb <= pc {
+                        b
+                    } else {
+                        c
+                    }
                 }
                 _ => return Err(format!("bad PNG filter {filter}")),
             };
-            row[x] = (src[x] as i32 + predicted) as u8; 
+            row[x] = (src[x] as i32 + predicted) as u8;
         }
     }
 
@@ -106,7 +122,9 @@ pub fn decode(data: &[u8]) -> Result<Image, String> {
                     let d = depth as usize;
                     let bit = x * d;
                     let i = ((row[bit / 8] >> (8 - d - bit % 8)) & ((1 << d) - 1) as u8) as usize;
-                    let p = palette.get(i * 3..i * 3 + 3).ok_or("palette index out of range")?;
+                    let p = palette
+                        .get(i * 3..i * 3 + 3)
+                        .ok_or("palette index out of range")?;
                     [p[0], p[1], p[2], trns.get(i).copied().unwrap_or(255)]
                 }
             };
@@ -114,7 +132,11 @@ pub fn decode(data: &[u8]) -> Result<Image, String> {
         }
     }
 
-    Ok(Image { width, height, rgba })
+    Ok(Image {
+        width,
+        height,
+        rgba,
+    })
 }
 
 fn crc32(chunks: &[&[u8]]) -> u32 {
@@ -123,7 +145,11 @@ fn crc32(chunks: &[&[u8]]) -> u32 {
         for &b in *chunk {
             crc ^= b as u32;
             for _ in 0..8 {
-                crc = if crc & 1 != 0 { (crc >> 1) ^ 0xEDB8_8320 } else { crc>> 1 };
+                crc = if crc & 1 != 0 {
+                    (crc >> 1) ^ 0xEDB8_8320
+                } else {
+                    crc >> 1
+                };
             }
         }
     }
@@ -148,7 +174,10 @@ pub fn encode(width: usize, height: usize, rgba: &[u8]) -> Vec<u8> {
     ihdr.extend_from_slice(&(height as u32).to_be_bytes());
     ihdr.extend_from_slice(&[8, 6, 0, 0, 0]);
     chunk(b"IHDR", &ihdr);
-    chunk(b"IDAT", &miniz_oxide::deflate::compress_to_vec_zlib(&raw, 6));
+    chunk(
+        b"IDAT",
+        &miniz_oxide::deflate::compress_to_vec_zlib(&raw, 6),
+    );
     chunk(b"IEND", &[]);
     out
 }
@@ -156,7 +185,7 @@ pub fn encode(width: usize, height: usize, rgba: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
- 
+
     #[test]
     fn encode_then_decode() {
         let (w, h) = (5, 3);
@@ -166,14 +195,18 @@ mod tests {
         assert_eq!(img.rgba, rgba);
         assert_eq!(crc32(&[b"IEND"]), 0xAE42_6082);
     }
-    
+
     #[test]
     fn decodes_the_game_font() {
         let img = decode(include_bytes!("../../resources/terminal8x8.png")).unwrap();
         assert_eq!((img.width, img.height), (128, 128));
         // '@' (64) sits at column 0, row 4; some of its pixels are lit.
-        let lit = (0..8).flat_map(|y| (0..8).map(move |x| (x, y)))
-            .filter(|&(x, y)| img.rgba[((32 + y) * 128 + x) * 4 + 3] > 0 && img.rgba[((32 + y) * 128 + x) * 4] > 128)
+        let lit = (0..8)
+            .flat_map(|y| (0..8).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                img.rgba[((32 + y) * 128 + x) * 4 + 3] > 0
+                    && img.rgba[((32 + y) * 128 + x) * 4] > 128
+            })
             .count();
         assert!(lit > 10, "{lit}");
     }

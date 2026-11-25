@@ -1,4 +1,4 @@
-use super::{Map, Rect, TileType, Position, spawner, SHOW_MAPGEN_VISUALIZER};
+use super::{Map, Position, Rect, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
 mod simple_map;
 use crate::engine::RandomNumberGenerator;
 use simple_map::SimpleMapBuilder;
@@ -72,7 +72,7 @@ pub struct BuilderMap {
     pub corridors: Option<Vec<Vec<usize>>>,
     pub history: Vec<Map>,
     pub width: i32,
-    pub height: i32
+    pub height: i32,
 }
 
 impl BuilderMap {
@@ -90,7 +90,7 @@ impl BuilderMap {
 pub struct BuilderChain {
     starter: Option<Box<dyn InitialMapBuilder>>,
     builders: Vec<Box<dyn MetaMapBuilder>>,
-    pub build_data: BuilderMap
+    pub build_data: BuilderMap,
 }
 
 impl BuilderChain {
@@ -106,15 +106,15 @@ impl BuilderChain {
                 corridors: None,
                 history: Vec::new(),
                 width,
-                height
-            }
+                height,
+            },
         }
     }
 
     pub fn start_with(&mut self, starter: Box<dyn InitialMapBuilder>) {
         match self.starter {
             None => self.starter = Some(starter),
-            Some(_) => panic!("You can only have one starting builder.")
+            Some(_) => panic!("You can only have one starting builder."),
         };
     }
 
@@ -143,52 +143,75 @@ impl BuilderChain {
 }
 
 pub trait InitialMapBuilder {
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap);
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    );
 }
 
 pub trait MetaMapBuilder {
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap);
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    );
 }
 
-pub fn level_builder(new_depth: i32, rng: &mut crate::engine::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
+pub fn level_builder(
+    new_depth: i32,
+    rng: &mut crate::engine::RandomNumberGenerator,
+    width: i32,
+    height: i32,
+) -> BuilderChain {
     crate::engine::log(format!("Depth: {}", new_depth));
     match new_depth {
         1 => town_builder(new_depth, rng, width, height),
         2 => forest_builder(new_depth, rng, width, height),
         3 => limestone_cavern_builder(new_depth, rng, width, height),
-        _ => random_builder(new_depth, rng, width, height)
+        _ => random_builder(new_depth, rng, width, height),
     }
 }
 
-pub fn random_builder(new_depth: i32, rng: &mut crate::engine::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
+pub fn random_builder(
+    new_depth: i32,
+    rng: &mut crate::engine::RandomNumberGenerator,
+    width: i32,
+    height: i32,
+) -> BuilderChain {
     let mut builder = BuilderChain::new(new_depth, width, height, "New Map");
     let type_roll = rng.roll_dice(1, 2);
     match type_roll {
         1 => random_room_builder(rng, &mut builder),
-        _ => random_shape_builder(rng, &mut builder)
+        _ => random_shape_builder(rng, &mut builder),
     }
 
     if rng.roll_dice(1, 3) == 1 {
-        builder.with(WaveformCollapseBuilder::new()); 
+        builder.with(WaveformCollapseBuilder::new());
 
         let (start_x, start_y) = random_starting_position(rng);
         builder.with(AreaStartingPosition::new(start_x, start_y));
 
         builder.with(VoronoiSpawning::new());
-        builder.with(DistantExit::new());   
+        builder.with(DistantExit::new());
     }
 
     if rng.roll_dice(1, 20) == 1 {
-        builder.with(PrefabBuilder::sectional(prefab_builder::prefab_sections::UNDERGROUND_FORT));
+        builder.with(PrefabBuilder::sectional(
+            prefab_builder::prefab_sections::UNDERGROUND_FORT,
+        ));
     }
 
     builder.with(DoorPlacement::new());
     builder.with(PrefabBuilder::vaults());
 
-    builder 
+    builder
 }
 
-fn random_shape_builder(rng: &mut crate::engine::RandomNumberGenerator, builder: &mut BuilderChain) {
+fn random_shape_builder(
+    rng: &mut crate::engine::RandomNumberGenerator,
+    builder: &mut BuilderChain,
+) {
     let builder_roll = rng.roll_dice(1, 16);
     match builder_roll {
         1 => builder.start_with(CellularAutomataBuilder::new()),
@@ -204,7 +227,9 @@ fn random_shape_builder(rng: &mut crate::engine::RandomNumberGenerator, builder:
         11 => builder.start_with(DLABuilder::insectoid()),
         12 => builder.start_with(VoronoiCellBuilder::pythagoras()),
         13 => builder.start_with(VoronoiCellBuilder::manhattan()),
-        _ => builder.start_with(PrefabBuilder::constant(prefab_builder::prefab_level::WFC_POPULATED))
+        _ => builder.start_with(PrefabBuilder::constant(
+            prefab_builder::prefab_level::WFC_POPULATED,
+        )),
     }
 
     builder.with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER));
@@ -215,7 +240,6 @@ fn random_shape_builder(rng: &mut crate::engine::RandomNumberGenerator, builder:
 
     builder.with(VoronoiSpawning::new());
     builder.with(DistantExit::new());
-
 }
 
 fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderChain) {
@@ -223,7 +247,7 @@ fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderCha
     match build_roll {
         1 => builder.start_with(SimpleMapBuilder::new()),
         2 => builder.start_with(BspDungeonBuilder::new()),
-        _ => builder.start_with(BspInteriorBuilder::new())
+        _ => builder.start_with(BspInteriorBuilder::new()),
     }
 
     if build_roll != 3 {
@@ -233,7 +257,7 @@ fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderCha
             2 => builder.with(RoomSorter::new(RoomSort::RIGHTMOST)),
             3 => builder.with(RoomSorter::new(RoomSort::TOPMOST)),
             4 => builder.with(RoomSorter::new(RoomSort::BOTTOMMOST)),
-            _ => builder.with(RoomSorter::new(RoomSort::CENTRAL))
+            _ => builder.with(RoomSorter::new(RoomSort::CENTRAL)),
         }
 
         builder.with(RoomDrawer::new());
@@ -243,7 +267,7 @@ fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderCha
             1 => builder.with(DoglegCorridors::new()),
             2 => builder.with(NearestCorridors::new()),
             3 => builder.with(StraightLineCorridors::new()),
-            _ => builder.with(BspCorridors::new())
+            _ => builder.with(BspCorridors::new()),
         }
 
         let cspawn_roll = rng.roll_dice(1, 2);
@@ -254,7 +278,7 @@ fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderCha
         let modifer_roll = rng.roll_dice(1, 6);
         match modifer_roll {
             1 => builder.with(RoomExploder::new()),
-            _ => builder.with(RoomCornerRounder::new())
+            _ => builder.with(RoomCornerRounder::new()),
         }
     }
 
@@ -264,13 +288,13 @@ fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderCha
         _ => {
             let (start_x, start_y) = random_starting_position(rng);
             builder.with(AreaStartingPosition::new(start_x, start_y));
-        } 
+        }
     }
 
     let exit_roll = rng.roll_dice(1, 2);
     match exit_roll {
         1 => builder.with(RoomBasedStairs::new()),
-        _ => builder.with(DistantExit::new())
+        _ => builder.with(DistantExit::new()),
     }
 
     let spawn_roll = rng.roll_dice(1, 2);
@@ -286,7 +310,7 @@ fn random_starting_position(rng: &mut RandomNumberGenerator) -> (XStart, YStart)
     match xroll {
         1 => x = XStart::LEFT,
         2 => x = XStart::CENTER,
-        _ => x = XStart::RIGHT
+        _ => x = XStart::RIGHT,
     }
 
     let y;
@@ -294,8 +318,8 @@ fn random_starting_position(rng: &mut RandomNumberGenerator) -> (XStart, YStart)
     match yroll {
         1 => y = YStart::BOTTOM,
         2 => y = YStart::CENTER,
-        _ => y = YStart::TOP
+        _ => y = YStart::TOP,
     }
 
-    (x,y)
+    (x, y)
 }

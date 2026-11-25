@@ -1,10 +1,14 @@
-use super::{MetaMapBuilder, BuilderMap, Rect, TileType};
+use super::{BuilderMap, MetaMapBuilder, Rect, TileType};
 use std::collections::HashSet;
 pub struct StraightLineCorridors {}
 
 impl MetaMapBuilder for StraightLineCorridors {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.corridors(rng, build_data);
     }
 }
@@ -12,10 +16,14 @@ impl MetaMapBuilder for StraightLineCorridors {
 impl StraightLineCorridors {
     #[allow(dead_code)]
     pub fn new() -> Box<StraightLineCorridors> {
-        Box::new(StraightLineCorridors{})
+        Box::new(StraightLineCorridors {})
     }
 
-    fn corridors(&mut self, _rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn corridors(
+        &mut self,
+        _rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         let rooms: Vec<Rect>;
         if let Some(rooms_builder) = &build_data.rooms {
             rooms = rooms_builder.clone();
@@ -33,7 +41,8 @@ impl StraightLineCorridors {
                 if i != j && !connected.contains(&j) {
                     let other_center = other_room.center();
                     let other_center_pt = crate::engine::Point::new(other_center.0, other_center.1);
-                    let distance = crate::engine::DistanceAlg::Pythagoras.distance2d(room_center_pt, other_center_pt);
+                    let distance = crate::engine::DistanceAlg::Pythagoras
+                        .distance2d(room_center_pt, other_center_pt);
                     room_distance.push((j, distance));
                 }
             }
@@ -44,7 +53,7 @@ impl StraightLineCorridors {
                 let line = crate::engine::line2d(
                     crate::engine::LineAlg::Bresenham,
                     room_center_pt,
-                    crate::engine::Point::new(dest_center.0, dest_center.1)
+                    crate::engine::Point::new(dest_center.0, dest_center.1),
                 );
 
                 let mut corridor = Vec::new();

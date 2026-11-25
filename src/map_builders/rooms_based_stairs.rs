@@ -1,10 +1,14 @@
-use super::{MetaMapBuilder, BuilderMap, TileType};
+use super::{BuilderMap, MetaMapBuilder, TileType};
 use crate::engine::RandomNumberGenerator;
 
 pub struct RoomBasedStairs {}
 
-impl MetaMapBuilder for RoomBasedStairs  {
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+impl MetaMapBuilder for RoomBasedStairs {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.build(rng, build_data)
     }
 }

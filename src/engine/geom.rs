@@ -55,13 +55,19 @@ pub enum Direction {
     South,
     SouthWest,
     West,
-    NorthWest
+    NorthWest,
 }
 
 impl Direction {
     pub const ALL: [Direction; 8] = [
-        Direction::North, Direction::NorthEast, Direction::East, Direction::SouthEast,
-        Direction::South, Direction::SouthWest, Direction::West, Direction::NorthWest,
+        Direction::North,
+        Direction::NorthEast,
+        Direction::East,
+        Direction::SouthEast,
+        Direction::South,
+        Direction::SouthWest,
+        Direction::West,
+        Direction::NorthWest,
     ];
 
     fn index(self) -> i32 {
@@ -128,7 +134,7 @@ impl DistanceAlg {
             DistanceAlg::Pythagoras => (dx * dx + dy * dy).sqrt(),
             DistanceAlg::PythagorasSquared => dx * dx + dy * dy,
             DistanceAlg::Manhattan => dx + dy,
-            DistanceAlg::Chebyshev => dx.max(dy)
+            DistanceAlg::Chebyshev => dx.max(dy),
         }
     }
 }
@@ -164,16 +170,19 @@ pub fn line2d(_alg: LineAlg, start: Point, end: Point) -> Vec<Point> {
 #[cfg(test)]
 mod tests {
     use super::*;
- 
+
     #[test]
     fn line_covers_both_ends() {
         let l = line2d(LineAlg::Bresenham, Point::new(0, 0), Point::new(4, 2));
         assert_eq!(l.first(), Some(&Point::new(0, 0)));
         assert_eq!(l.last(), Some(&Point::new(4, 2)));
         assert_eq!(l.len(), 5);
-        assert_eq!(line2d(LineAlg::Bresenham, Point::new(3, 3), Point::new(3, 3)), vec![Point::new(3, 3)]);
+        assert_eq!(
+            line2d(LineAlg::Bresenham, Point::new(3, 3), Point::new(3, 3)),
+            vec![Point::new(3, 3)]
+        );
     }
- 
+
     #[test]
     fn directions() {
         assert_eq!(Direction::North.rotated(2), Direction::East);
@@ -187,7 +196,7 @@ mod tests {
             assert_eq!((c.round() as i32, s.round() as i32), d.delta(), "{d:?}");
         }
     }
- 
+
     #[test]
     fn distances() {
         let (a, b) = (Point::new(0, 0), Point::new(3, 4));

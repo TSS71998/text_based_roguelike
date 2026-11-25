@@ -47,7 +47,7 @@ pub fn entropy_seed() -> u64 {
 struct InputQueue {
     keys: std::collections::VecDeque<super::input::Key>,
     mouse_down: bool,
-    was_down: bool
+    was_down: bool,
 }
 
 impl InputQueue {

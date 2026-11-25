@@ -2,7 +2,7 @@
 
 #[derive(Clone, Debug)]
 pub struct RandomNumberGenerator {
-    s: [u64; 4]
+    s: [u64; 4],
 }
 
 fn splitmix64(state: &mut u64) -> u64 {
@@ -51,14 +51,19 @@ impl RandomNumberGenerator {
 
     pub fn seeded(seed: u64) -> RandomNumberGenerator {
         let mut sm = seed;
-        let s = [splitmix64(&mut sm), splitmix64(&mut sm), splitmix64(&mut sm), splitmix64(&mut sm)];
+        let s = [
+            splitmix64(&mut sm),
+            splitmix64(&mut sm),
+            splitmix64(&mut sm),
+            splitmix64(&mut sm),
+        ];
         RandomNumberGenerator { s }
     }
 
     pub fn next_u64(&mut self) -> u64 {
         let result = self.s[1].wrapping_mul(5).rotate_left(7).wrapping_mul(9);
         let t = self.s[1] << 17;
-        
+
         self.s[2] ^= self.s[0];
         self.s[3] ^= self.s[1];
         self.s[1] ^= self.s[2];
@@ -94,17 +99,22 @@ impl RandomNumberGenerator {
     }
 
     pub fn roll_dice(&mut self, n: i32, die_type: i32) -> i32 {
-        (0..n.max(0)).map(|_| self.range(1, die_type.max(1) + 1)).sum()
+        (0..n.max(0))
+            .map(|_| self.range(1, die_type.max(1) + 1))
+            .sum()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
- 
+
     #[test]
     fn deterministic_and_in_range() {
-        let (mut a, mut b) = (RandomNumberGenerator::seeded(7), RandomNumberGenerator::seeded(7));
+        let (mut a, mut b) = (
+            RandomNumberGenerator::seeded(7),
+            RandomNumberGenerator::seeded(7),
+        );
         for _ in 0..1000 {
             assert_eq!(a.next_u64(), b.next_u64());
         }
@@ -118,12 +128,17 @@ mod tests {
         }
         assert_eq!(a.range(5, 5), 5);
     }
- 
+
     #[test]
     fn roughly_uniform() {
         let mut r = RandomNumberGenerator::seeded(1);
         let mut counts = [0u32; 6];
-        for _ in 0..60_000 { counts[r.range(0usize, 6)] += 1; }
-        assert!(counts.iter().all(|&c| (9_000..11_000).contains(&c)), "{counts:?}");
+        for _ in 0..60_000 {
+            counts[r.range(0usize, 6)] += 1;
+        }
+        assert!(
+            counts.iter().all(|&c| (9_000..11_000).contains(&c)),
+            "{counts:?}"
+        );
     }
 }

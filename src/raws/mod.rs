@@ -1,4 +1,4 @@
-use serde::{Deserialize};
+use serde::Deserialize;
 use std::sync::{LazyLock, Mutex};
 mod mob_structs;
 use mob_structs::*;
@@ -26,11 +26,11 @@ pub struct Raws {
     pub props: Vec<Prop>,
     pub spawn_table: Vec<SpawnTableEntry>,
     pub loot_tables: Vec<LootTable>,
-    pub faction_table: Vec<FactionInfo>
+    pub faction_table: Vec<FactionInfo>,
 }
 
 pub fn load_raws() {
     let decoder: Raws = serde_json::from_str(RAW_FILE).expect("Unable to parse JSON");
-    
+
     RAWS.lock().unwrap().load(decoder);
 }

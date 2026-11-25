@@ -1,5 +1,5 @@
 use super::color::RGBA;
-use super::framebuffer::{blend, pack, Framebuffer};
+use super::framebuffer::{Framebuffer, blend, pack};
 
 pub struct Font {
     pub glyph_w: usize,
@@ -7,14 +7,17 @@ pub struct Font {
     masks: Vec<bool>,
     cell_w: usize,
     cell_h: usize,
-    cell_masks: Vec<bool>
+    cell_masks: Vec<bool>,
 }
 
 impl Font {
     pub fn from_png(png: &[u8], glyph_w: usize, glyph_h: usize) -> Result<Font, String> {
         let img = super::png::decode(png)?;
         if img.width < glyph_w * 16 || img.height < glyph_h * 16 {
-            return Err(format!("font image is {}x{}, expected 16x16 glyphs of {glyph_w}x{glyph_h}", img.width, img.height));
+            return Err(format!(
+                "font image is {}x{}, expected 16x16 glyphs of {glyph_w}x{glyph_h}",
+                img.width, img.height
+            ));
         }
         let mut masks = vec![false; 256 * glyph_w * glyph_h];
         for g in 0..256 {
@@ -28,24 +31,40 @@ impl Font {
                 }
             }
         }
-        Ok(Font { glyph_w, glyph_h, masks, cell_w: 0, cell_h: 0, cell_masks: Vec::new() })
+        Ok(Font {
+            glyph_w,
+            glyph_h,
+            masks,
+            cell_w: 0,
+            cell_h: 0,
+            cell_masks: Vec::new(),
+        })
     }
 
     pub fn prepare_cell_size(&mut self, cell_w: usize, cell_h: usize) {
         self.cell_w = cell_w;
         self.cell_h = cell_h;
-        self.masks = vec![false; 256 * cell_w * cell_h];
+        self.cell_masks = vec![false; 256 * cell_w * cell_h];
         for g in 0..256 {
             for y in 0..cell_h {
                 for x in 0..cell_w {
                     let (sx, sy) = (x * self.glyph_w / cell_w, y * self.glyph_h / cell_h);
-                    self.cell_masks[(g * cell_h + y) * cell_w + x] = self.masks[(g * self.glyph_h + sy) * self.glyph_w + sx];
+                    self.cell_masks[(g * cell_h + y) * cell_w + x] =
+                        self.masks[(g * self.glyph_h + sy) * self.glyph_w + sx];
                 }
             }
         }
     }
 
-    pub fn draw_cell(&self, fb: &mut Framebuffer, px: i32, py: i32, glyph: u16, fg: RGBA, bg: RGBA) {
+    pub fn draw_cell(
+        &self,
+        fb: &mut Framebuffer,
+        px: i32,
+        py: i32,
+        glyph: u16,
+        fg: RGBA,
+        bg: RGBA,
+    ) {
         let (cw, ch) = (self.cell_w, self.cell_h);
         fb.blend_rect(px, py, cw as i32, ch as i32, bg);
         if fg.a <= 0.0 {
@@ -64,14 +83,28 @@ impl Font {
                 let fx = px + x as i32;
                 if mask[y * cw + x] && fx >= 0 && (fx as usize) < fb.width {
                     let p = &mut fb.pixels[row + fx as usize];
-                    *p = if opaque { color } else { blend(*p, color, fg.a) };
+                    *p = if opaque {
+                        color
+                    } else {
+                        blend(*p, color, fg.a)
+                    };
                 }
             }
         }
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_scaled(&self, fb: &mut Framebuffer, x: f32, y: f32, w: f32, h: f32, glyph: u16, fg: RGBA, bg: RGBA) {
+    pub fn draw_scaled(
+        &self,
+        fb: &mut Framebuffer,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        glyph: u16,
+        fg: RGBA,
+        bg: RGBA,
+    ) {
         let (x0, y0) = (x.round() as i32, y.round() as i32);
         let (x1, y1) = ((x + w).round() as i32, (y + h).round() as i32);
         let (dw, dh) = (x1 - x0, y1 - y0);

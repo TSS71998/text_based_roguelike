@@ -1,32 +1,43 @@
-use super::{InitialMapBuilder, MetaMapBuilder, BuilderMap, TileType, Position, paint, Symmetry};
+use super::{BuilderMap, InitialMapBuilder, MetaMapBuilder, Position, Symmetry, TileType, paint};
 use crate::engine::RandomNumberGenerator;
 
 #[derive(PartialEq, Copy, Clone)]
 #[allow(dead_code)]
-pub enum DrunkSpawnMode { StartingPoint, Random }
+pub enum DrunkSpawnMode {
+    StartingPoint,
+    Random,
+}
 
 pub struct DrunkardSettings {
-    pub spawn_mode : DrunkSpawnMode,
-    pub drunken_lifetime : i32,
+    pub spawn_mode: DrunkSpawnMode,
+    pub drunken_lifetime: i32,
     pub floor_percent: f32,
     pub brush_size: i32,
-    pub symmetry: Symmetry
+    pub symmetry: Symmetry,
 }
 
 pub struct DrunkardsWalkBuilder {
-    settings : DrunkardSettings
+    settings: DrunkardSettings,
 }
 
 impl InitialMapBuilder for DrunkardsWalkBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data : &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.build(rng, build_data);
     }
 }
 
 impl MetaMapBuilder for DrunkardsWalkBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data : &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.build(rng, build_data);
     }
 }
@@ -34,87 +45,95 @@ impl MetaMapBuilder for DrunkardsWalkBuilder {
 impl DrunkardsWalkBuilder {
     #[allow(dead_code)]
     pub fn new(settings: DrunkardSettings) -> DrunkardsWalkBuilder {
-        DrunkardsWalkBuilder{
-            settings
-        }
+        DrunkardsWalkBuilder { settings }
     }
 
     #[allow(dead_code)]
     pub fn open_area() -> Box<DrunkardsWalkBuilder> {
-        Box::new(DrunkardsWalkBuilder{
-            settings : DrunkardSettings{
+        Box::new(DrunkardsWalkBuilder {
+            settings: DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::StartingPoint,
                 drunken_lifetime: 400,
                 floor_percent: 0.5,
                 brush_size: 1,
-                symmetry: Symmetry::None
-            }
+                symmetry: Symmetry::None,
+            },
         })
     }
 
     #[allow(dead_code)]
     pub fn open_halls() -> Box<DrunkardsWalkBuilder> {
-        Box::new(DrunkardsWalkBuilder{
-            settings : DrunkardSettings{
+        Box::new(DrunkardsWalkBuilder {
+            settings: DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::Random,
                 drunken_lifetime: 400,
                 floor_percent: 0.5,
                 brush_size: 1,
-                symmetry: Symmetry::None
+                symmetry: Symmetry::None,
             },
         })
     }
 
     #[allow(dead_code)]
     pub fn winding_passages() -> Box<DrunkardsWalkBuilder> {
-        Box::new(DrunkardsWalkBuilder{
-            settings : DrunkardSettings{
+        Box::new(DrunkardsWalkBuilder {
+            settings: DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::Random,
                 drunken_lifetime: 100,
                 floor_percent: 0.4,
                 brush_size: 1,
-                symmetry: Symmetry::None
+                symmetry: Symmetry::None,
             },
         })
     }
 
     #[allow(dead_code)]
     pub fn fat_passages() -> Box<DrunkardsWalkBuilder> {
-        Box::new(DrunkardsWalkBuilder{
-            settings : DrunkardSettings{
+        Box::new(DrunkardsWalkBuilder {
+            settings: DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::Random,
                 drunken_lifetime: 100,
                 floor_percent: 0.4,
                 brush_size: 2,
-                symmetry: Symmetry::None
+                symmetry: Symmetry::None,
             },
         })
     }
 
     #[allow(dead_code)]
     pub fn fearful_symmetry() -> Box<DrunkardsWalkBuilder> {
-        Box::new(DrunkardsWalkBuilder{
-            settings : DrunkardSettings{
+        Box::new(DrunkardsWalkBuilder {
+            settings: DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::Random,
                 drunken_lifetime: 100,
                 floor_percent: 0.4,
                 brush_size: 1,
-                symmetry: Symmetry::Both
+                symmetry: Symmetry::Both,
             },
         })
     }
 
-    fn build(&mut self, rng : &mut RandomNumberGenerator, build_data : &mut BuilderMap) {
+    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         // Set a central starting point
-        let starting_position = Position{ x: build_data.map.width / 2, y: build_data.map.height / 2 };
-        let start_idx = build_data.map.xy_idx(starting_position.x, starting_position.y);
+        let starting_position = Position {
+            x: build_data.map.width / 2,
+            y: build_data.map.height / 2,
+        };
+        let start_idx = build_data
+            .map
+            .xy_idx(starting_position.x, starting_position.y);
         build_data.map.tiles[start_idx] = TileType::Floor;
 
         let total_tiles = build_data.map.width * build_data.map.height;
         let desired_floor_tiles = (self.settings.floor_percent * total_tiles as f32) as usize;
-        let mut floor_tile_count = build_data.map.tiles.iter().filter(|a| **a == TileType::Floor).count();
+        let mut floor_tile_count = build_data
+            .map
+            .tiles
+            .iter()
+            .filter(|a| **a == TileType::Floor)
+            .count();
         let mut digger_count = 0;
-        while floor_tile_count  < desired_floor_tiles {
+        while floor_tile_count < desired_floor_tiles {
             let mut did_something = false;
             let mut drunk_x;
             let mut drunk_y;
@@ -140,15 +159,37 @@ impl DrunkardsWalkBuilder {
                 if build_data.map.tiles[drunk_idx] == TileType::Wall {
                     did_something = true;
                 }
-                paint(&mut build_data.map, self.settings.symmetry, self.settings.brush_size, drunk_x, drunk_y);
+                paint(
+                    &mut build_data.map,
+                    self.settings.symmetry,
+                    self.settings.brush_size,
+                    drunk_x,
+                    drunk_y,
+                );
                 build_data.map.tiles[drunk_idx] = TileType::DownStairs;
 
                 let stagger_direction = rng.roll_dice(1, 4);
                 match stagger_direction {
-                    1 => { if drunk_x > 2 { drunk_x -= 1; } }
-                    2 => { if drunk_x < build_data.map.width-2 { drunk_x += 1; } }
-                    3 => { if drunk_y > 2 { drunk_y -=1; } }
-                    _ => { if drunk_y < build_data.map.height-2 { drunk_y += 1; } }
+                    1 => {
+                        if drunk_x > 2 {
+                            drunk_x -= 1;
+                        }
+                    }
+                    2 => {
+                        if drunk_x < build_data.map.width - 2 {
+                            drunk_x += 1;
+                        }
+                    }
+                    3 => {
+                        if drunk_y > 2 {
+                            drunk_y -= 1;
+                        }
+                    }
+                    _ => {
+                        if drunk_y < build_data.map.height - 2 {
+                            drunk_y += 1;
+                        }
+                    }
                 }
 
                 drunk_life -= 1;
@@ -163,7 +204,12 @@ impl DrunkardsWalkBuilder {
                     *t = TileType::Floor;
                 }
             }
-            floor_tile_count = build_data.map.tiles.iter().filter(|a| **a == TileType::Floor).count();
+            floor_tile_count = build_data
+                .map
+                .tiles
+                .iter()
+                .filter(|a| **a == TileType::Floor)
+                .count();
         }
     }
 }

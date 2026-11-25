@@ -1,9 +1,13 @@
-use super::{MetaMapBuilder, BuilderMap, TileType, Rect};
+use super::{BuilderMap, MetaMapBuilder, Rect, TileType};
 pub struct RoomDrawer {}
 
 impl MetaMapBuilder for RoomDrawer {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.build(rng, build_data);
     }
 }
@@ -11,10 +15,14 @@ impl MetaMapBuilder for RoomDrawer {
 impl RoomDrawer {
     #[allow(dead_code)]
     pub fn new() -> Box<RoomDrawer> {
-        Box::new(RoomDrawer{})
+        Box::new(RoomDrawer {})
     }
 
-    fn build(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         let rooms: Vec<Rect>;
         if let Some(rooms_builder) = &build_data.rooms {
             rooms = rooms_builder.clone();
@@ -26,15 +34,15 @@ impl RoomDrawer {
             let room_type = rng.roll_dice(1, 4);
             match room_type {
                 1 => self.circle(build_data, room),
-                _ => self.rectangle(build_data, room)
+                _ => self.rectangle(build_data, room),
             }
             build_data.take_snapshot();
         }
     }
 
     fn rectangle(&mut self, build_data: &mut BuilderMap, room: &Rect) {
-        for y in room.y1 + 1 ..= room.y2 {
-            for x in room.x1 + 1 ..= room.x2 {
+        for y in room.y1 + 1..=room.y2 {
+            for x in room.x1 + 1..=room.x2 {
                 let idx = build_data.map.xy_idx(x, y);
                 if idx > 0 && idx < ((build_data.map.width * build_data.map.height) - 1) as usize {
                     build_data.map.tiles[idx] = TileType::Floor;
@@ -48,11 +56,15 @@ impl RoomDrawer {
         let center = room.center();
         let center_pt = crate::engine::Point::new(center.0, center.1);
 
-        for y in room.y1 ..= room.y2 {
-            for x in room.x1 ..= room.x2 {
+        for y in room.y1..=room.y2 {
+            for x in room.x1..=room.x2 {
                 let idx = build_data.map.xy_idx(x, y);
-                let distance = crate::engine::DistanceAlg::Pythagoras.distance2d(center_pt, crate::engine::Point::new(x, y));
-                if idx > 0 && idx < ((build_data.map.width * build_data.map.height) - 1) as usize && distance <= radius {
+                let distance = crate::engine::DistanceAlg::Pythagoras
+                    .distance2d(center_pt, crate::engine::Point::new(x, y));
+                if idx > 0
+                    && idx < ((build_data.map.width * build_data.map.height) - 1) as usize
+                    && distance <= radius
+                {
                     build_data.map.tiles[idx] = TileType::Floor;
                 }
             }

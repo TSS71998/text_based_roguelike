@@ -1,10 +1,17 @@
 use crate::engine::RandomNumberGenerator;
 
-use super::{BuilderChain, CellularAutomataBuilder, XStart, YStart, AreaStartingPosition,
-    CullUnreachable, VoronoiSpawning, MetaMapBuilder};
+use super::{
+    AreaStartingPosition, BuilderChain, CellularAutomataBuilder, CullUnreachable, MetaMapBuilder,
+    VoronoiSpawning, XStart, YStart,
+};
 use crate::{TileType, map};
 
-pub fn forest_builder(new_depth: i32, _rng: &mut crate::engine::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
+pub fn forest_builder(
+    new_depth: i32,
+    _rng: &mut crate::engine::RandomNumberGenerator,
+    width: i32,
+    height: i32,
+) -> BuilderChain {
     let mut chain = BuilderChain::new(new_depth, width, height, "Into the Woods");
     chain.start_with(CellularAutomataBuilder::new());
     chain.with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER));
@@ -18,7 +25,11 @@ pub fn forest_builder(new_depth: i32, _rng: &mut crate::engine::RandomNumberGene
 pub struct YellowBrickRoad {}
 
 impl MetaMapBuilder for YellowBrickRoad {
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut super::BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut super::BuilderMap,
+    ) {
         self.build(rng, build_data)
     }
 }
@@ -26,22 +37,28 @@ impl MetaMapBuilder for YellowBrickRoad {
 impl YellowBrickRoad {
     #[allow(dead_code)]
     pub fn new() -> Box<YellowBrickRoad> {
-        Box::new(YellowBrickRoad{})
+        Box::new(YellowBrickRoad {})
     }
 
-    fn find_exit(&self, build_data: &mut super::BuilderMap, seed_x: i32, seed_y: i32) -> (i32, i32) {
+    fn find_exit(
+        &self,
+        build_data: &mut super::BuilderMap,
+        seed_x: i32,
+        seed_y: i32,
+    ) -> (i32, i32) {
         let mut available_floors: Vec<(usize, f32)> = Vec::new();
         for (idx, tiletype) in build_data.map.tiles.iter().enumerate() {
             if map::tile_walkable(*tiletype) {
-                available_floors.push(
-                    (
-                        idx,
-                        crate::engine::DistanceAlg::PythagorasSquared.distance2d(
-                        crate::engine::Point::new(idx as i32 % build_data.map.width, idx as i32 / build_data.map.width),
-                        crate::engine::Point::new(seed_x, seed_y)
-                        )
-                    )
-                );
+                available_floors.push((
+                    idx,
+                    crate::engine::DistanceAlg::PythagorasSquared.distance2d(
+                        crate::engine::Point::new(
+                            idx as i32 % build_data.map.width,
+                            idx as i32 / build_data.map.width,
+                        ),
+                        crate::engine::Point::new(seed_x, seed_y),
+                    ),
+                ));
             }
         }
         if available_floors.is_empty() {
@@ -69,7 +86,11 @@ impl YellowBrickRoad {
         let starting_pos = build_data.starting_position.as_ref().unwrap().clone();
         let start_idx = build_data.map.xy_idx(starting_pos.x, starting_pos.y);
 
-        let (end_x, end_y) = self.find_exit(build_data, build_data.map.width - 2, build_data.map.height/2);
+        let (end_x, end_y) = self.find_exit(
+            build_data,
+            build_data.map.width - 2,
+            build_data.map.height / 2,
+        );
         let end_idx = build_data.map.xy_idx(end_x, end_y);
 
         build_data.map.populate_blocked();
@@ -79,10 +100,10 @@ impl YellowBrickRoad {
             let x = *idx as i32 % build_data.map.width;
             let y = *idx as i32 / build_data.map.width;
             self.paint_road(build_data, x, y);
-            self.paint_road(build_data, x-1, y);
-            self.paint_road(build_data, x+1, y);
-            self.paint_road(build_data, x, y-1);
-            self.paint_road(build_data, x, y+1);
+            self.paint_road(build_data, x - 1, y);
+            self.paint_road(build_data, x + 1, y);
+            self.paint_road(build_data, x, y - 1);
+            self.paint_road(build_data, x, y + 1);
         }
         build_data.take_snapshot();
 
@@ -90,7 +111,12 @@ impl YellowBrickRoad {
         let (seed_x, seed_y, stream_startx, stream_starty) = if exit_dir == 1 {
             (build_data.map.width - 1, 1, 0, build_data.height - 1)
         } else {
-            (build_data.map.width - 1, build_data.height - 1, 0, build_data.height - 1)
+            (
+                build_data.map.width - 1,
+                build_data.height - 1,
+                0,
+                build_data.height - 1,
+            )
         };
 
         let (stairs_x, stairs_y) = self.find_exit(build_data, seed_x, seed_y);
@@ -99,7 +125,7 @@ impl YellowBrickRoad {
 
         let (stream_x, stream_y) = self.find_exit(build_data, stream_startx, stream_starty);
         let stream_idx = build_data.map.xy_idx(stream_x, stream_y);
-        let stream = crate::engine::a_star_search(stair_idx, stream_idx , &mut build_data.map);
+        let stream = crate::engine::a_star_search(stair_idx, stream_idx, &mut build_data.map);
         for tile in stream.steps.iter() {
             if build_data.map.tiles[*tile as usize] == TileType::Floor {
                 build_data.map.tiles[*tile as usize] = TileType::ShallowWater;

@@ -2,7 +2,7 @@
 pub struct XpColor {
     pub r: u8,
     pub g: u8,
-    pub b: u8
+    pub b: u8,
 }
 
 impl XpColor {
@@ -19,34 +19,41 @@ impl XpColor {
 pub struct XpCell {
     pub ch: u32,
     pub fg: XpColor,
-    pub bg: XpColor
+    pub bg: XpColor,
 }
 
 pub struct XpLayer {
     pub width: usize,
     pub height: usize,
-    cells: Vec<XpCell>
+    cells: Vec<XpCell>,
 }
 
 impl XpLayer {
     pub fn get(&self, x: usize, y: usize) -> Option<&XpCell> {
-        if x < self.width && y < self.height { self.cells.get(x * self.height + y) } else { None }
+        if x < self.width && y < self.height {
+            self.cells.get(x * self.height + y)
+        } else {
+            None
+        }
     }
 }
 
 pub struct XpFile {
     pub version: i32,
-    pub layers: Vec<XpLayer>
+    pub layers: Vec<XpLayer>,
 }
 
 fn gunzip(data: &[u8]) -> Result<Vec<u8>, String> {
     if data.len() < 18 || data[0] != 0x1f || data[1] != 0x8b || data[2] != 8 {
-        return Err("not gzip data".into())
+        return Err("not gzip data".into());
     }
     let flags = data[3];
     let mut pos = 10;
     let skip_zstr = |pos: &mut usize| -> Result<(), String> {
-        let end = data[*pos..].iter().position(|&b| b == 0).ok_or("bad gzip header")?;
+        let end = data[*pos..]
+            .iter()
+            .position(|&b| b == 0)
+            .ok_or("bad gzip header")?;
         *pos += end + 1;
         Ok(())
     };
@@ -54,10 +61,18 @@ fn gunzip(data: &[u8]) -> Result<Vec<u8>, String> {
         let xlen = u16::from_le_bytes([data[pos], data[pos + 1]]) as usize;
         pos += 2 + xlen;
     }
-    if flags & 8 != 0 { skip_zstr(&mut pos)?; }
-    if flags & 16 != 0 { skip_zstr(&mut pos)?; }
-    if flags & 2 != 0 { pos += 2; }
-    let body = data.get(pos..data.len().saturating_sub(8)).ok_or("bad gzip header")?;
+    if flags & 8 != 0 {
+        skip_zstr(&mut pos)?;
+    }
+    if flags & 16 != 0 {
+        skip_zstr(&mut pos)?;
+    }
+    if flags & 2 != 0 {
+        pos += 2;
+    }
+    let body = data
+        .get(pos..data.len().saturating_sub(8))
+        .ok_or("bad gzip header")?;
     miniz_oxide::inflate::decompress_to_vec(body).map_err(|e| format!("gzip data: {:?}", e.status))
 }
 
@@ -79,15 +94,27 @@ impl XpFile {
             let mut cells = Vec::with_capacity(width * height);
             for _ in 0..width * height {
                 let ch = i32_at(&mut pos)? as u32;
-                let c = raw.get(pos..pos+6).ok_or("truncated .xp file")?;
+                let c = raw.get(pos..pos + 6).ok_or("truncated .xp file")?;
                 pos += 6;
                 cells.push(XpCell {
                     ch,
-                    fg: XpColor { r: c[0], g: c[1], b: c[2] },
-                    bg: XpColor { r: c[3], g: c[4], b: c[5] }
+                    fg: XpColor {
+                        r: c[0],
+                        g: c[1],
+                        b: c[2],
+                    },
+                    bg: XpColor {
+                        r: c[3],
+                        g: c[4],
+                        b: c[5],
+                    },
                 });
             }
-            layers.push(XpLayer { width, height, cells });
+            layers.push(XpLayer {
+                width,
+                height,
+                cells,
+            });
         }
         Ok(XpFile { version, layers })
     }
@@ -96,10 +123,11 @@ impl XpFile {
 #[cfg(test)]
 mod tests {
     use super::*;
- 
+
     #[test]
     fn loads_menu_background() {
-        let xp = XpFile::from_bytes(include_bytes!("../../resources/SmallDungeon_80x50.xp")).unwrap();
+        let xp =
+            XpFile::from_bytes(include_bytes!("../../resources/SmallDungeon_80x50.xp")).unwrap();
         assert!(!xp.layers.is_empty());
         let l = &xp.layers[0];
         assert_eq!((l.width, l.height), (80, 50));

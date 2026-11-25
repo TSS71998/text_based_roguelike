@@ -1,13 +1,20 @@
-use std::collections::{HashMap, HashSet};
-use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
-use crate::{attr_bonus, mana_at_level, npc_hp, random_table::RandomTable, raws::faction_structs::Reaction};
-use super::{Raws, MobLight};
+use super::{MobLight, Raws};
 use crate::components::*;
+use crate::{
+    attr_bonus, mana_at_level, npc_hp, random_table::RandomTable, raws::faction_structs::Reaction,
+};
+use specs::{
+    prelude::*,
+    saveload::{MarkedBuilder, SimpleMarker},
+};
+use std::collections::{HashMap, HashSet};
 
 pub fn parse_dice_string(dice: &str) -> (i32, i32, i32) {
     fn number(s: &str) -> Option<(i32, &str)> {
         let end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
-        if end == 0 { return None; }
+        if end == 0 {
+            return None;
+        }
         Some((s[..end].parse().ok()?, &s[end..]))
     }
 
@@ -30,7 +37,7 @@ pub fn parse_dice_string(dice: &str) -> (i32, i32, i32) {
 #[cfg(test)]
 mod dice_tests {
     use super::parse_dice_string;
- 
+
     #[test]
     fn parses_dice() {
         assert_eq!(parse_dice_string("2d6"), (2, 6, 0));
@@ -42,9 +49,9 @@ mod dice_tests {
 }
 
 pub enum SpawnType {
-    AtPosition {x: i32, y: i32},
-    Equipped {by: Entity},
-    Carried {by: Entity}
+    AtPosition { x: i32, y: i32 },
+    Equipped { by: Entity },
+    Carried { by: Entity },
 }
 
 pub struct RawMaster {
@@ -53,18 +60,25 @@ pub struct RawMaster {
     mob_index: HashMap<String, usize>,
     prop_index: HashMap<String, usize>,
     loot_index: HashMap<String, usize>,
-    faction_index: HashMap<String, HashMap<String, Reaction>>
+    faction_index: HashMap<String, HashMap<String, Reaction>>,
 }
 
 impl RawMaster {
     pub fn empty() -> RawMaster {
         RawMaster {
-            raws: Raws { items: Vec::new(), mobs: Vec::new(), props: Vec::new(), spawn_table: Vec::new(), loot_tables: Vec::new(), faction_table: Vec::new() },
+            raws: Raws {
+                items: Vec::new(),
+                mobs: Vec::new(),
+                props: Vec::new(),
+                spawn_table: Vec::new(),
+                loot_tables: Vec::new(),
+                faction_table: Vec::new(),
+            },
             item_index: HashMap::new(),
             mob_index: HashMap::new(),
             prop_index: HashMap::new(),
             loot_index: HashMap::new(),
-            faction_index: HashMap::new()
+            faction_index: HashMap::new(),
         }
     }
 
@@ -73,29 +87,41 @@ impl RawMaster {
         self.item_index = HashMap::new();
         let mut used_names: HashSet<String> = HashSet::new();
         for (i, item) in self.raws.items.iter().enumerate() {
-            if used_names.contains(&item.name){
-                crate::engine::log(format!("WARNING: duplicate item name in raws [{}]", item.name));
+            if used_names.contains(&item.name) {
+                crate::engine::log(format!(
+                    "WARNING: duplicate item name in raws [{}]",
+                    item.name
+                ));
             }
             self.item_index.insert(item.name.clone(), i);
             used_names.insert(item.name.clone());
         }
         for (i, mob) in self.raws.mobs.iter().enumerate() {
-            if used_names.contains(&mob.name){
-                crate::engine::log(format!("WARNING: duplicate mob name in raws [{}]", mob.name));
+            if used_names.contains(&mob.name) {
+                crate::engine::log(format!(
+                    "WARNING: duplicate mob name in raws [{}]",
+                    mob.name
+                ));
             }
             self.mob_index.insert(mob.name.clone(), i);
             used_names.insert(mob.name.clone());
         }
         for (i, prop) in self.raws.props.iter().enumerate() {
-            if used_names.contains(&prop.name){
-                crate::engine::log(format!("WARNING: duplicate prop name in raws [{}]", prop.name));
+            if used_names.contains(&prop.name) {
+                crate::engine::log(format!(
+                    "WARNING: duplicate prop name in raws [{}]",
+                    prop.name
+                ));
             }
             self.prop_index.insert(prop.name.clone(), i);
             used_names.insert(prop.name.clone());
         }
         for spawn in self.raws.spawn_table.iter() {
-            if !used_names.contains(&spawn.name){
-                crate::engine::log(format!("WARNING: Spawn tables references unspecified entity [{}]", spawn.name));
+            if !used_names.contains(&spawn.name) {
+                crate::engine::log(format!(
+                    "WARNING: Spawn tables references unspecified entity [{}]",
+                    spawn.name
+                ));
             }
         }
 
@@ -110,8 +136,8 @@ impl RawMaster {
                     match other.1.as_str() {
                         "ignore" => Reaction::Ignore,
                         "flee" => Reaction::Flee,
-                        _ => Reaction::Attack
-                    }
+                        _ => Reaction::Attack,
+                    },
                 );
             }
             self.faction_index.insert(faction.name.clone(), reactions);
@@ -143,11 +169,19 @@ pub fn string_to_slot(slot: &str) -> EquipmentSlot {
         "Feet" => EquipmentSlot::Feet,
         "Hands" => EquipmentSlot::Hands,
         "Melee" => EquipmentSlot::Melee,
-        _ => {crate::engine::log(format!("Warning: unknown equipment slot type [{}]", slot)); EquipmentSlot::Melee}
+        _ => {
+            crate::engine::log(format!("Warning: unknown equipment slot type [{}]", slot));
+            EquipmentSlot::Melee
+        }
     }
 }
 
-pub fn spawn_named_entity(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnType) -> Option<Entity> {
+pub fn spawn_named_entity(
+    raws: &RawMaster,
+    ecs: &mut World,
+    key: &str,
+    pos: SpawnType,
+) -> Option<Entity> {
     if raws.item_index.contains_key(key) {
         return spawn_named_item(raws, ecs, key, pos);
     } else if raws.mob_index.contains_key(key) {
@@ -158,7 +192,12 @@ pub fn spawn_named_entity(raws: &RawMaster, ecs: &mut World, key: &str, pos: Spa
     None
 }
 
-pub fn spawn_named_item(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnType) -> Option<Entity> {
+pub fn spawn_named_item(
+    raws: &RawMaster,
+    ecs: &mut World,
+    key: &str,
+    pos: SpawnType,
+) -> Option<Entity> {
     if raws.item_index.contains_key(key) {
         let item_template = &raws.raws.items[raws.item_index[key]];
 
@@ -170,56 +209,84 @@ pub fn spawn_named_item(raws: &RawMaster, ecs: &mut World, key: &str, pos: Spawn
             eb = eb.with(get_renderable_component(renderable));
         }
 
-        eb = eb.with(Name{name: item_template.name.clone()});
+        eb = eb.with(Name {
+            name: item_template.name.clone(),
+        });
 
-        eb = eb.with(crate::components::Item{
+        eb = eb.with(crate::components::Item {
             initiative_penalty: item_template.initiative_penalty.unwrap_or(0.0),
             weight_lbs: item_template.weight_lbs.unwrap_or(0.0),
-            base_value: item_template.base_value.unwrap_or(0.0)
+            base_value: item_template.base_value.unwrap_or(0.0),
         });
 
         if let Some(consumable) = &item_template.consumable {
-            eb = eb.with(crate::components::Consumable{});
+            eb = eb.with(crate::components::Consumable {});
             for effect in consumable.effects.iter() {
                 let effect_name = effect.0.as_str();
                 match effect_name {
                     "provides_healing" => {
-                        eb = eb.with(ProvidesHealing{heal_amount: effect.1.parse::<i32>().unwrap()})
+                        eb = eb.with(ProvidesHealing {
+                            heal_amount: effect.1.parse::<i32>().unwrap(),
+                        })
                     }
-                    "ranged" => {eb = eb.with(Ranged{range: effect.1.parse::<i32>().unwrap()})},
-                    "damage" => {eb = eb.with(InflictsDamage{damage: effect.1.parse::<i32>().unwrap()})},
-                    "area_of_effect" => {eb = eb.with(AreaEffect{radius: effect.1.parse::<i32>().unwrap()})},
-                    "confusion" => {eb = eb.with(Confusion{turns: effect.1.parse::<i32>().unwrap()})},
-                    "magic_mapping" => {eb = eb.with(MagicMapper{})},
-                    "food" => {eb = eb.with(ProvidesFood{})}
+                    "ranged" => {
+                        eb = eb.with(Ranged {
+                            range: effect.1.parse::<i32>().unwrap(),
+                        })
+                    }
+                    "damage" => {
+                        eb = eb.with(InflictsDamage {
+                            damage: effect.1.parse::<i32>().unwrap(),
+                        })
+                    }
+                    "area_of_effect" => {
+                        eb = eb.with(AreaEffect {
+                            radius: effect.1.parse::<i32>().unwrap(),
+                        })
+                    }
+                    "confusion" => {
+                        eb = eb.with(Confusion {
+                            turns: effect.1.parse::<i32>().unwrap(),
+                        })
+                    }
+                    "magic_mapping" => eb = eb.with(MagicMapper {}),
+                    "food" => eb = eb.with(ProvidesFood {}),
                     _ => {
-                        crate::engine::log(format!("Warning: consumable effect {} not implemented.", effect_name));
+                        crate::engine::log(format!(
+                            "Warning: consumable effect {} not implemented.",
+                            effect_name
+                        ));
                     }
                 }
             }
         }
-        
+
         if let Some(weapon) = &item_template.weapon {
-            eb = eb.with(Equippable{slot: EquipmentSlot::Melee});
+            eb = eb.with(Equippable {
+                slot: EquipmentSlot::Melee,
+            });
             let (n_dice, die_type, bonus) = parse_dice_string(&weapon.base_damage);
-            let mut wpn = MeleeWeapon{
+            let mut wpn = MeleeWeapon {
                 attribute: WeaponAttribute::Might,
                 damage_n_dice: n_dice,
                 damage_die_type: die_type,
                 damage_bonus: bonus,
-                hit_bonus: weapon.hit_bonus
+                hit_bonus: weapon.hit_bonus,
             };
             match weapon.attribute.as_str() {
                 "Quickness" => wpn.attribute = WeaponAttribute::Quickness,
-                _ => wpn.attribute = WeaponAttribute::Might
+                _ => wpn.attribute = WeaponAttribute::Might,
             }
             eb = eb.with(wpn);
         }
 
         if let Some(wearable) = &item_template.wearable {
             let slot = string_to_slot(&wearable.slot);
-            eb = eb.with(Equippable{slot});
-            eb = eb.with(Wearable{slot, armor_class: wearable.armor_class});
+            eb = eb.with(Equippable { slot });
+            eb = eb.with(Wearable {
+                slot,
+                armor_class: wearable.armor_class,
+            });
         }
 
         return Some(eb.build());
@@ -229,13 +296,18 @@ pub fn spawn_named_item(raws: &RawMaster, ecs: &mut World, key: &str, pos: Spawn
 
 fn light_component(light: &MobLight) -> LightSource {
     LightSource::flickering(
-        crate::engine::RGB::from_hex(&light.color).expect("Bad light color"), 
-        light.range, 
-        light.flicker.unwrap_or(0.0)
+        crate::engine::RGB::from_hex(&light.color).expect("Bad light color"),
+        light.range,
+        light.flicker.unwrap_or(0.0),
     )
 }
 
-pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnType) -> Option<Entity> {
+pub fn spawn_named_mob(
+    raws: &RawMaster,
+    ecs: &mut World,
+    key: &str,
+    pos: SpawnType,
+) -> Option<Entity> {
     if raws.mob_index.contains_key(key) {
         let mob_template = &raws.raws.mobs[raws.mob_index[key]];
 
@@ -247,80 +319,148 @@ pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnT
             eb = eb.with(get_renderable_component(renderable));
         }
 
-        eb = eb.with(Name{name: mob_template.name.clone()});
+        eb = eb.with(Name {
+            name: mob_template.name.clone(),
+        });
 
         match mob_template.movement.as_ref() {
-            "random" => eb = eb.with(MoveMode{mode: Movement::Random}),
-            "random_waypoint" => eb = eb.with(MoveMode{mode: Movement::RandomWaypoint { path: None }}),
-            _ => eb = eb.with(MoveMode{mode: Movement::Static})
+            "random" => {
+                eb = eb.with(MoveMode {
+                    mode: Movement::Random,
+                })
+            }
+            "random_waypoint" => {
+                eb = eb.with(MoveMode {
+                    mode: Movement::RandomWaypoint { path: None },
+                })
+            }
+            _ => {
+                eb = eb.with(MoveMode {
+                    mode: Movement::Static,
+                })
+            }
         }
 
         if let Some(quips) = &mob_template.quips {
-            eb = eb.with(Quips{
-                available: quips.clone()
+            eb = eb.with(Quips {
+                available: quips.clone(),
             });
         }
 
         if mob_template.blocks_tile {
-            eb = eb.with(BlocksTile{});
+            eb = eb.with(BlocksTile {});
         }
 
         let mut mob_fitness = 11;
         let mut mob_int = 11;
-        let mut attr = Attributes{
-            might: Attribute { base: 11, modifiers: 0, bonus: attr_bonus(11) },
-            fitness: Attribute { base: 11, modifiers: 0, bonus: attr_bonus(11) },
-            quickness: Attribute { base: 11, modifiers: 0, bonus: attr_bonus(11) },
-            intelligence: Attribute { base: 11, modifiers: 0, bonus: attr_bonus(11) },
+        let mut attr = Attributes {
+            might: Attribute {
+                base: 11,
+                modifiers: 0,
+                bonus: attr_bonus(11),
+            },
+            fitness: Attribute {
+                base: 11,
+                modifiers: 0,
+                bonus: attr_bonus(11),
+            },
+            quickness: Attribute {
+                base: 11,
+                modifiers: 0,
+                bonus: attr_bonus(11),
+            },
+            intelligence: Attribute {
+                base: 11,
+                modifiers: 0,
+                bonus: attr_bonus(11),
+            },
         };
         if let Some(might) = mob_template.attributes.might {
-            attr.might = Attribute { base: might, modifiers: 0, bonus: attr_bonus(might) };
+            attr.might = Attribute {
+                base: might,
+                modifiers: 0,
+                bonus: attr_bonus(might),
+            };
         }
         if let Some(fitness) = mob_template.attributes.fitness {
-            attr.fitness = Attribute { base: fitness, modifiers: 0, bonus: attr_bonus(fitness) };
+            attr.fitness = Attribute {
+                base: fitness,
+                modifiers: 0,
+                bonus: attr_bonus(fitness),
+            };
             mob_fitness = fitness;
         }
         if let Some(quickness) = mob_template.attributes.quickness {
-            attr.quickness = Attribute { base: quickness, modifiers: 0, bonus: attr_bonus(quickness) };
+            attr.quickness = Attribute {
+                base: quickness,
+                modifiers: 0,
+                bonus: attr_bonus(quickness),
+            };
         }
         if let Some(intelligence) = mob_template.attributes.intelligence {
-            attr.intelligence = Attribute { base: intelligence, modifiers: 0, bonus: attr_bonus(intelligence) };
+            attr.intelligence = Attribute {
+                base: intelligence,
+                modifiers: 0,
+                bonus: attr_bonus(intelligence),
+            };
             mob_int = intelligence;
         }
         eb = eb.with(attr);
 
-        let mob_level = if mob_template.level.is_some() {mob_template.level.unwrap()} else {1};
+        let mob_level = if mob_template.level.is_some() {
+            mob_template.level.unwrap()
+        } else {
+            1
+        };
         let mob_hp = npc_hp(mob_fitness, mob_level);
         let mob_mana = mana_at_level(mob_int, mob_level);
 
         let pools = Pools {
             level: mob_level,
             xp: 0,
-            hit_points: Pool { max: mob_hp, current: mob_hp },
-            mana: Pool { max: mob_mana, current: mob_mana },
+            hit_points: Pool {
+                max: mob_hp,
+                current: mob_hp,
+            },
+            mana: Pool {
+                max: mob_mana,
+                current: mob_mana,
+            },
             total_weight: 0.0,
-            total_initiative_penalty: 0.0
+            total_initiative_penalty: 0.0,
         };
         eb = eb.with(pools);
 
-        let mut skills = Skills{skills: HashMap::new()};
+        let mut skills = Skills {
+            skills: HashMap::new(),
+        };
         skills.skills.insert(Skill::Melee, 1);
         skills.skills.insert(Skill::Defense, 1);
         skills.skills.insert(Skill::Magic, 1);
         if let Some(mobskills) = &mob_template.skills {
             for sk in mobskills.iter() {
                 match sk.0.as_str() {
-                    "Melee" => {skills.skills.insert(Skill::Melee, *sk.1);},
-                    "Defense" => {skills.skills.insert(Skill::Defense, *sk.1);},
-                    "Magic" => {skills.skills.insert(Skill::Magic, *sk.1);},
-                    _ => {crate::engine::log(format!("Unknown skill reference: [{}]", sk.0));}
+                    "Melee" => {
+                        skills.skills.insert(Skill::Melee, *sk.1);
+                    }
+                    "Defense" => {
+                        skills.skills.insert(Skill::Defense, *sk.1);
+                    }
+                    "Magic" => {
+                        skills.skills.insert(Skill::Magic, *sk.1);
+                    }
+                    _ => {
+                        crate::engine::log(format!("Unknown skill reference: [{}]", sk.0));
+                    }
                 }
             }
         }
         eb = eb.with(skills);
 
         if let Some(loot) = &mob_template.loot_table {
-            eb = eb.with(LootTable{table: loot.clone()});
+            eb = eb.with(LootTable {
+                table: loot.clone(),
+            });
         }
 
         if let Some(light) = &mob_template.light {
@@ -328,20 +468,28 @@ pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnT
         }
 
         if let Some(faction) = &mob_template.faction {
-            eb = eb.with(Faction{name: faction.clone()});
+            eb = eb.with(Faction {
+                name: faction.clone(),
+            });
         } else {
-            eb = eb.with(Faction{name: "Mindless".to_string()})
+            eb = eb.with(Faction {
+                name: "Mindless".to_string(),
+            })
         }
 
-        eb = eb.with(Initiative{current: 2});
-        eb = eb.with(EquipmentChanged{});
+        eb = eb.with(Initiative { current: 2 });
+        eb = eb.with(EquipmentChanged {});
 
-        eb = eb.with(Viewshed{visible_tiles: Vec::new(), range: mob_template.vision_range, dirty: true});
+        eb = eb.with(Viewshed {
+            visible_tiles: Vec::new(),
+            range: mob_template.vision_range,
+            dirty: true,
+        });
 
         if let Some(na) = &mob_template.natural {
-            let mut nature = NaturalAttackDefense{
+            let mut nature = NaturalAttackDefense {
                 armor_class: na.armor_class,
-                attacks: Vec::new()
+                attacks: Vec::new(),
             };
             if let Some(attacks) = &na.attacks {
                 for nattack in attacks.iter() {
@@ -351,7 +499,7 @@ pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnT
                         hit_bonus: nattack.hit_bonus,
                         damage_n_dice: n,
                         damage_die_type: d,
-                        damage_bonus: b
+                        damage_bonus: b,
                     };
                     nature.attacks.push(attack);
                 }
@@ -366,13 +514,18 @@ pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnT
                 spawn_named_entity(raws, ecs, tag, SpawnType::Equipped { by: new_mob });
             }
         }
-        
+
         return Some(new_mob);
     }
     None
 }
 
-pub fn spawn_named_prop(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnType) -> Option<Entity> {
+pub fn spawn_named_prop(
+    raws: &RawMaster,
+    ecs: &mut World,
+    key: &str,
+    pos: SpawnType,
+) -> Option<Entity> {
     if raws.prop_index.contains_key(key) {
         let prop_template = &raws.raws.props[raws.prop_index[key]];
 
@@ -384,29 +537,43 @@ pub fn spawn_named_prop(raws: &RawMaster, ecs: &mut World, key: &str, pos: Spawn
             eb = eb.with(get_renderable_component(renderable));
         }
 
-        eb = eb.with(Name{name: prop_template.name.clone()});
+        eb = eb.with(Name {
+            name: prop_template.name.clone(),
+        });
 
         if let Some(hidden) = prop_template.hidden {
-            if hidden {eb = eb.with(Hidden{})};
+            if hidden {
+                eb = eb.with(Hidden {})
+            };
         }
         if let Some(blocks_tile) = prop_template.block_tile {
-            if blocks_tile {eb = eb.with(BlocksTile{})};
+            if blocks_tile {
+                eb = eb.with(BlocksTile {})
+            };
         }
         if let Some(blocks_visibility) = prop_template.blocks_visibility {
-            if blocks_visibility {eb = eb.with(BlocksVisibility{})};
+            if blocks_visibility {
+                eb = eb.with(BlocksVisibility {})
+            };
         }
         if let Some(door_open) = prop_template.door_open {
-            if door_open {eb = eb.with(Door{open: door_open})};
+            if door_open {
+                eb = eb.with(Door { open: door_open })
+            };
         }
         if let Some(light) = &prop_template.light {
-            eb  = eb.with(light_component(light));
+            eb = eb.with(light_component(light));
         }
         if let Some(entry_trigger) = &prop_template.entry_trigger {
-            eb = eb.with(EntryTrigger{});
+            eb = eb.with(EntryTrigger {});
             for effect in entry_trigger.effects.iter() {
                 match effect.0.as_str() {
-                    "damage" => {eb = eb.with(InflictsDamage{damage: effect.1.parse::<i32>().unwrap()})}
-                    "single_activation" => {eb = eb.with(SingleActivation{})}
+                    "damage" => {
+                        eb = eb.with(InflictsDamage {
+                            damage: effect.1.parse::<i32>().unwrap(),
+                        })
+                    }
+                    "single_activation" => eb = eb.with(SingleActivation {}),
                     _ => {}
                 }
             }
@@ -420,7 +587,9 @@ pub fn spawn_named_prop(raws: &RawMaster, ecs: &mut World, key: &str, pos: Spawn
 pub fn get_spawn_table_for_depth(raws: &RawMaster, depth: i32) -> RandomTable {
     use super::SpawnTableEntry;
 
-    let available_options: Vec<&SpawnTableEntry> = raws.raws.spawn_table
+    let available_options: Vec<&SpawnTableEntry> = raws
+        .raws
+        .spawn_table
         .iter()
         .filter(|a| depth >= a.min_depth && depth <= a.max_depth)
         .collect();
@@ -436,36 +605,47 @@ pub fn get_spawn_table_for_depth(raws: &RawMaster, depth: i32) -> RandomTable {
     rt
 }
 
-fn spawn_position<'a>(pos: SpawnType, new_entity: EntityBuilder<'a>, tag: &str, raws: &RawMaster) -> EntityBuilder<'a> {
+fn spawn_position<'a>(
+    pos: SpawnType,
+    new_entity: EntityBuilder<'a>,
+    tag: &str,
+    raws: &RawMaster,
+) -> EntityBuilder<'a> {
     let eb = new_entity;
 
     match pos {
-        SpawnType::AtPosition {x, y} => eb.with(Position{x, y}),
-        SpawnType::Carried {by} => eb.with(InBackpack{owner: by}),
-        SpawnType::Equipped {by} => {
+        SpawnType::AtPosition { x, y } => eb.with(Position { x, y }),
+        SpawnType::Carried { by } => eb.with(InBackpack { owner: by }),
+        SpawnType::Equipped { by } => {
             let slot = find_slot_for_equiippable_item(tag, raws);
-            eb.with(Equipped{owner: by, slot})
+            eb.with(Equipped { owner: by, slot })
         }
     }
 }
 
-fn get_renderable_component(renderable: &super::item_structs::Renderable) -> crate::components::Renderable {
-    crate::components::Renderable{
+fn get_renderable_component(
+    renderable: &super::item_structs::Renderable,
+) -> crate::components::Renderable {
+    crate::components::Renderable {
         glyph: crate::engine::to_cp437(renderable.glyph.chars().next().unwrap()),
         fg: crate::engine::RGB::from_hex(&renderable.fg).expect("Invalid RGB"),
         bg: crate::engine::RGB::from_hex(&renderable.bg).expect("Invalid RGB"),
-        render_order: renderable.order
+        render_order: renderable.order,
     }
 }
 
-pub fn get_item_drop(raws: &RawMaster, rng: &mut crate::engine::RandomNumberGenerator, table: &str) -> Option<String> {
+pub fn get_item_drop(
+    raws: &RawMaster,
+    rng: &mut crate::engine::RandomNumberGenerator,
+    table: &str,
+) -> Option<String> {
     if raws.loot_index.contains_key(table) {
         let mut rt = RandomTable::new();
         let available_options = &raws.raws.loot_tables[raws.loot_index[table]];
         for item in available_options.drops.iter() {
             rt = rt.add(item.name.clone(), item.weight);
         }
-        return  Some(rt.roll(rng));
+        return Some(rt.roll(rng));
     }
     None
 }

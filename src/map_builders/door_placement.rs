@@ -1,10 +1,14 @@
-use super::{MetaMapBuilder, BuilderMap, TileType};
+use super::{BuilderMap, MetaMapBuilder, TileType};
 use crate::engine::RandomNumberGenerator;
 
 pub struct DoorPlacement {}
 
 impl MetaMapBuilder for DoorPlacement {
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.doors(rng, build_data)
     }
 }
@@ -28,7 +32,10 @@ impl DoorPlacement {
         } else {
             let tiles = build_data.map.tiles.clone();
             for (i, tile) in tiles.iter().enumerate() {
-                if *tile == TileType::Floor && self.door_possible(build_data, i) && rng.roll_dice(1, 3) == 1 {
+                if *tile == TileType::Floor
+                    && self.door_possible(build_data, i)
+                    && rng.roll_dice(1, 3) == 1
+                {
                     build_data.spawn_list.push((i, "Door".to_string()));
                 }
             }
@@ -38,33 +45,41 @@ impl DoorPlacement {
     fn door_possible(&self, build_data: &mut BuilderMap, idx: usize) -> bool {
         let mut blocked = false;
         for spawn in build_data.spawn_list.iter() {
-            if spawn.0 == idx {blocked = true;}
+            if spawn.0 == idx {
+                blocked = true;
+            }
         }
-        if blocked{return false;}
-        
+        if blocked {
+            return false;
+        }
+
         let x = idx % build_data.map.width as usize;
         let y = idx / build_data.map.width as usize;
 
-        if build_data.map.tiles[idx] == TileType::Floor &&
-            (x > 1 && build_data.map.tiles[idx - 1] == TileType::Floor) &&
-            (x < (build_data.map.width-2) as usize && build_data.map.tiles[idx + 1] == TileType::Floor) &&
-            (y > 1 && build_data.map.tiles[idx - build_data.map.width as usize] == TileType::Wall) &&
-            (y < (build_data.map.height-2) as usize && build_data.map.tiles[idx + build_data.map.width as usize] == TileType::Wall) 
+        if build_data.map.tiles[idx] == TileType::Floor
+            && (x > 1 && build_data.map.tiles[idx - 1] == TileType::Floor)
+            && (x < (build_data.map.width - 2) as usize
+                && build_data.map.tiles[idx + 1] == TileType::Floor)
+            && (y > 1
+                && build_data.map.tiles[idx - build_data.map.width as usize] == TileType::Wall)
+            && (y < (build_data.map.height - 2) as usize
+                && build_data.map.tiles[idx + build_data.map.width as usize] == TileType::Wall)
         {
             return true;
         }
 
-        if build_data.map.tiles[idx] == TileType::Floor &&
-            (x > 1 && build_data.map.tiles[idx - 1] == TileType::Wall) &&
-            (x < (build_data.map.width-2) as usize && build_data.map.tiles[idx + 1] == TileType::Wall) &&
-            (y > 1 && build_data.map.tiles[idx - build_data.map.width as usize] == TileType::Floor) &&
-            (y < (build_data.map.height-2) as usize && build_data.map.tiles[idx + build_data.map.width as usize] == TileType::Floor) 
+        if build_data.map.tiles[idx] == TileType::Floor
+            && (x > 1 && build_data.map.tiles[idx - 1] == TileType::Wall)
+            && (x < (build_data.map.width - 2) as usize
+                && build_data.map.tiles[idx + 1] == TileType::Wall)
+            && (y > 1
+                && build_data.map.tiles[idx - build_data.map.width as usize] == TileType::Floor)
+            && (y < (build_data.map.height - 2) as usize
+                && build_data.map.tiles[idx + build_data.map.width as usize] == TileType::Floor)
         {
             return true;
         }
 
         false
     }
-
-
 }

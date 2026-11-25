@@ -1,19 +1,21 @@
-use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 use super::{Map, TileType};
 use crate::components::{Position, Viewshed};
-use crate::{OtherLevelPosition, map_builders};
-use specs::prelude::*;
 use crate::engine::Point;
+use crate::{OtherLevelPosition, map_builders};
+use serde::{Deserialize, Serialize};
+use specs::prelude::*;
+use std::collections::HashMap;
 
 #[derive(Default, Serialize, Deserialize, Clone)]
 pub struct MasterDungeonMap {
-    maps: HashMap<i32, Map>
+    maps: HashMap<i32, Map>,
 }
 
 impl MasterDungeonMap {
     pub fn new() -> MasterDungeonMap {
-        MasterDungeonMap { maps: HashMap::new() }
+        MasterDungeonMap {
+            maps: HashMap::new(),
+        }
     }
 
     pub fn store_map(&mut self, map: &Map) {
@@ -35,7 +37,9 @@ impl MasterDungeonMap {
     }
 
     pub fn from_maps(maps: impl IntoIterator<Item = Map>) -> MasterDungeonMap {
-        MasterDungeonMap { maps: maps.into_iter().map(|m| (m.depth, m)).collect() }
+        MasterDungeonMap {
+            maps: maps.into_iter().map(|m| (m.depth, m)).collect(),
+        }
     }
 }
 
@@ -67,7 +71,12 @@ fn transition_to_new_map(ecs: &mut World, new_depth: i32) -> Vec<Map> {
     {
         let mut worldmap_resource = ecs.write_resource::<Map>();
         *worldmap_resource = builder.build_data.map.clone();
-        player_start = builder.build_data.starting_position.as_mut().unwrap().clone();
+        player_start = builder
+            .build_data
+            .starting_position
+            .as_mut()
+            .unwrap()
+            .clone();
     }
 
     std::mem::drop(rng);
@@ -101,9 +110,13 @@ fn transition_to_existing_map(ecs: &mut World, new_depth: i32, offset: i32) {
     let map = dungeon_master.get_map(new_depth).unwrap();
     let mut world_resource = ecs.write_resource::<Map>();
     let player_entity = ecs.fetch::<Entity>();
-    
+
     let w = map.width;
-    let stair_type = if offset < 0 {TileType::DownStairs} else {TileType::UpStairs};
+    let stair_type = if offset < 0 {
+        TileType::DownStairs
+    } else {
+        TileType::UpStairs
+    };
     for (idx, tt) in map.tiles.iter().enumerate() {
         if *tt == stair_type {
             let mut player_position = ecs.write_resource::<Point>();
@@ -137,11 +150,20 @@ pub fn freeze_level_entities(ecs: &mut World) {
     let mut pos_to_delete: Vec<Entity> = Vec::new();
     for (entity, pos) in (&entities, &positions).join() {
         if entity != *player_entity {
-            other_level_positions.insert(entity, OtherLevelPosition { x: pos.x, y: pos.y, depth: map_depth }).expect("Insert falied");
+            other_level_positions
+                .insert(
+                    entity,
+                    OtherLevelPosition {
+                        x: pos.x,
+                        y: pos.y,
+                        depth: map_depth,
+                    },
+                )
+                .expect("Insert falied");
             pos_to_delete.push(entity);
         }
     }
-    
+
     for p in pos_to_delete.iter() {
         positions.remove(*p);
     }
@@ -157,11 +179,13 @@ pub fn thaw_level_entities(ecs: &World) {
     let mut pos_to_delete: Vec<Entity> = Vec::new();
     for (entity, pos) in (&entities, &other_level_positions).join() {
         if entity != *player_entity && pos.depth == map_depth {
-            positions.insert(entity, Position { x: pos.x, y: pos.y }).expect("Insert falied");
+            positions
+                .insert(entity, Position { x: pos.x, y: pos.y })
+                .expect("Insert falied");
             pos_to_delete.push(entity);
         }
     }
-    
+
     for p in pos_to_delete.iter() {
         other_level_positions.remove(*p);
     }

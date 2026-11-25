@@ -1,10 +1,10 @@
-use std::cell::Cell;
-use specs::prelude::*;
-use crate::{Map, Position, Renderable, Hidden};
 use super::{MAP_LAYER, UI_LAYER, WORLD_LAYER};
+use crate::engine::{Ctx, Point, PointF, RGB, RGBA};
 use crate::map::tile_glyph;
 use crate::presentation::{EffectKind, Presentation};
-use crate::engine::{Point, PointF, Ctx, RGB, RGBA};
+use crate::{Hidden, Map, Position, Renderable};
+use specs::prelude::*;
+use std::cell::Cell;
 
 const SHOW_BOUNDARIES: bool = true;
 
@@ -30,8 +30,14 @@ fn snap(v: f32) -> f32 {
 pub fn map_set_bg(ctx: &mut Ctx, x: i32, y: i32, color: RGB) {
     let (fx, fy) = FRAME_FRAC.with(|f| f.get());
     ctx.set_active_console(WORLD_LAYER);
-    ctx.set_fancy(PointF::new(x as f32 - fx, y as f32 - fy + 1.0), Z_HIGHLIGHT, PointF::new(1.0, 1.0), RGBA::from_f32(0.0, 0.0, 0.0, 0.0),
-                  RGBA::from_f32(color.r, color.g, color.b, 0.55), crate::engine::to_cp437(' '));
+    ctx.set_fancy(
+        PointF::new(x as f32 - fx, y as f32 - fy + 1.0),
+        Z_HIGHLIGHT,
+        PointF::new(1.0, 1.0),
+        RGBA::from_f32(0.0, 0.0, 0.0, 0.0),
+        RGBA::from_f32(color.r, color.g, color.b, 0.55),
+        crate::engine::to_cp437(' '),
+    );
     ctx.set_active_console(UI_LAYER);
 }
 
@@ -72,14 +78,29 @@ pub fn render(ecs: &World, ctx: &mut Ctx) {
             let (tx, ty) = (base_x + sx, base_y + sy);
             let drawn = if tx > 0 && tx < map_width && ty > 0 && ty < map_height {
                 let idx = map.xy_idx(tx, ty);
-                if map.revealed_tiles[idx] { Some(tile_glyph(idx, &*map)) } else { None }
+                if map.revealed_tiles[idx] {
+                    Some(tile_glyph(idx, &*map))
+                } else {
+                    None
+                }
             } else if SHOW_BOUNDARIES {
-                Some((crate::engine::to_cp437('.'), RGB::named(crate::engine::GRAY), RGB::named(crate::engine::BLACK)))
+                Some((
+                    crate::engine::to_cp437('.'),
+                    RGB::named(crate::engine::GRAY),
+                    RGB::named(crate::engine::BLACK),
+                ))
             } else {
                 None
             };
             if let Some((glyph, fg, bg)) = drawn {
-                ctx.set_fancy(PointF::new(sx as f32 - fx, sy as f32 - fy + 1.0), Z_MAP, tile_scale, with_alpha(fg, 1.0), with_alpha(bg, 1.0), glyph);
+                ctx.set_fancy(
+                    PointF::new(sx as f32 - fx, sy as f32 - fy + 1.0),
+                    Z_MAP,
+                    tile_scale,
+                    with_alpha(fg, 1.0),
+                    with_alpha(bg, 1.0),
+                    glyph,
+                );
             }
         }
     }
@@ -98,16 +119,25 @@ pub fn render(ecs: &World, ctx: &mut Ctx) {
 
     let mut z = Z_ACTOR;
     for (entity, pos, render, _) in actors {
-        let (vx, vy) = presentation.as_ref()
+        let (vx, vy) = presentation
+            .as_ref()
             .and_then(|p| p.visual_pos(entity))
             .unwrap_or((pos.x as f32, pos.y as f32));
         let (sx, sy) = (snap(vx - origin_x), snap(vy - origin_y));
-        if sx < -1.0 || sx > (VIEW_W + 1) as f32 || sy < -1.0 || sy > (VIEW_H + 1) as f32 { continue; }
+        if sx < -1.0 || sx > (VIEW_W + 1) as f32 || sy < -1.0 || sy > (VIEW_H + 1) as f32 {
+            continue;
+        }
 
         let flash = presentation.as_ref().map_or(0.0, |p| p.flash(entity));
         let fg = render.fg.lerp(RGB::from_f32(1.0, 1.0, 1.0), flash);
-        ctx.set_fancy(PointF::new(sx, sy + 1.0), z, PointF::new(1.0, 1.0),
-                      with_alpha(fg, 1.0), with_alpha(render.bg, 1.0), render.glyph);
+        ctx.set_fancy(
+            PointF::new(sx, sy + 1.0),
+            z,
+            PointF::new(1.0, 1.0),
+            with_alpha(fg, 1.0),
+            with_alpha(render.bg, 1.0),
+            render.glyph,
+        );
         z += 1;
     }
 
@@ -115,22 +145,37 @@ pub fn render(ecs: &World, ctx: &mut Ctx) {
         let mut z = Z_EFFECT;
         for effect in p.effects() {
             let (ex, ey) = (effect.x.round() as i32, effect.y.round() as i32);
-            if ex < 0 || ey < 0 || ex >= map.width || ey >= map.height { continue; }
-            if !map.visible_tiles[map.xy_idx(ex, ey)] { continue; }
+            if ex < 0 || ey < 0 || ex >= map.width || ey >= map.height {
+                continue;
+            }
+            if !map.visible_tiles[map.xy_idx(ex, ey)] {
+                continue;
+            }
             let t = effect.progress();
             let (sx, sy) = (snap(effect.x - origin_x), snap(effect.y - origin_y));
             match &effect.kind {
                 EffectKind::Ghost { glyph, fg, bg: _ } => {
-                    ctx.set_fancy(PointF::new(sx, sy + 1.0), z, PointF::new(1.0, 1.0),
-                                  with_alpha(*fg, 1.0 - t), RGBA::from_f32(0.0, 0.0, 0.0, 0.0), *glyph);
+                    ctx.set_fancy(
+                        PointF::new(sx, sy + 1.0),
+                        z,
+                        PointF::new(1.0, 1.0),
+                        with_alpha(*fg, 1.0 - t),
+                        RGBA::from_f32(0.0, 0.0, 0.0, 0.0),
+                        *glyph,
+                    );
                 }
                 EffectKind::Text { text, color } => {
                     let rise = t * 0.9 + 0.2;
                     let alpha = 1.0 - t * t;
                     for (i, ch) in text.chars().enumerate() {
-                        ctx.set_fancy(PointF::new(sx + i as f32 * 0.5, sy + 1.0 - rise), z,
-                                      PointF::new(1.0, 1.2),
-                                      with_alpha(*color, alpha), RGBA::from_f32(0.0, 0.0, 0.0, 0.0), crate::engine::to_cp437(ch));
+                        ctx.set_fancy(
+                            PointF::new(sx + i as f32 * 0.5, sy + 1.0 - rise),
+                            z,
+                            PointF::new(1.0, 1.2),
+                            with_alpha(*color, alpha),
+                            RGBA::from_f32(0.0, 0.0, 0.0, 0.0),
+                            crate::engine::to_cp437(ch),
+                        );
                     }
                 }
             }
@@ -170,9 +215,9 @@ pub fn render_debug_map(map: &Map, ctx: &mut Ctx) {
     let map_height = map.height - 1;
 
     let mut y = 0;
-    for ty in min_y .. max_y {
+    for ty in min_y..max_y {
         let mut x = 0;
-        for tx in min_x .. max_x {
+        for tx in min_x..max_x {
             if tx > 0 && tx < map_width && ty > 0 && ty < map_height {
                 let idx = map.xy_idx(tx, ty);
                 if map.revealed_tiles[idx] {
@@ -180,7 +225,13 @@ pub fn render_debug_map(map: &Map, ctx: &mut Ctx) {
                     ctx.set(x, y, fg, bg, glyph);
                 }
             } else if SHOW_BOUNDARIES {
-                ctx.set(x, y, RGB::named(crate::engine::GRAY), RGB::named(crate::engine::BLACK), crate::engine::to_cp437('.'));
+                ctx.set(
+                    x,
+                    y,
+                    RGB::named(crate::engine::GRAY),
+                    RGB::named(crate::engine::BLACK),
+                    crate::engine::to_cp437('.'),
+                );
             }
             x += 1;
         }

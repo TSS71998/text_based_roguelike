@@ -43,12 +43,14 @@ pub type DecodeResult<T> = Result<T, Corrupt>;
 
 #[derive(Default)]
 pub struct ByteWriter {
-    pub buf: Vec<u8>
+    pub buf: Vec<u8>,
 }
 
 impl ByteWriter {
     pub fn with_capacity(n: usize) -> Self {
-        ByteWriter { buf: Vec::with_capacity(n) }
+        ByteWriter {
+            buf: Vec::with_capacity(n),
+        }
     }
 
     pub fn u8(&mut self, v: u8) {
@@ -110,7 +112,7 @@ impl ByteWriter {
 
 pub struct ByteReader<'a> {
     data: &'a [u8],
-    pos: usize
+    pos: usize,
 }
 
 impl<'a> ByteReader<'a> {
@@ -129,7 +131,10 @@ impl<'a> ByteReader<'a> {
 
     pub fn take(&mut self, n: usize) -> DecodeResult<&'a [u8]> {
         let end = self.pos.checked_add(n).ok_or(Corrupt("length overflow"))?;
-        let s = self.data.get(self.pos..end).ok_or(Corrupt("unxpected end of data"))?;
+        let s = self
+            .data
+            .get(self.pos..end)
+            .ok_or(Corrupt("unxpected end of data"))?;
         self.pos = end;
         Ok(s)
     }
@@ -142,7 +147,7 @@ impl<'a> ByteReader<'a> {
         match self.u8()? {
             0 => Ok(false),
             1 => Ok(true),
-            _ => Err(Corrupt("invalid bool"))
+            _ => Err(Corrupt("invalid bool")),
         }
     }
 
@@ -177,7 +182,7 @@ impl<'a> ByteReader<'a> {
     }
 
     pub fn str(&mut self) -> DecodeResult<String> {
-        let b =self.bytes()?;
+        let b = self.bytes()?;
         String::from_utf8(b.to_vec()).map_err(|_| Corrupt("invalid utf-8"))
     }
 
@@ -225,7 +230,7 @@ pub fn write_map(w: &mut ByteWriter, map: &Map) {
 pub fn read_map(r: &mut ByteReader) -> DecodeResult<Map> {
     let width = r.i32()?;
     let height = r.i32()?;
-    if width <= 0 || height <= 0  {
+    if width <= 0 || height <= 0 {
         return Err(Corrupt("bad map dimensions"));
     }
     let count = (width as usize)
@@ -267,8 +272,12 @@ mod tests {
         vals.iter().for_each(|&v| w.varint(v));
         ints.iter().for_each(|&v| w.varint_i(v));
         let mut r = ByteReader::new(&w.buf);
-        for &v in &vals { assert_eq!(r.varint().unwrap(), v); }
-        for &v in &ints { assert_eq!(r.varint_i().unwrap(), v); }
+        for &v in &vals {
+            assert_eq!(r.varint().unwrap(), v);
+        }
+        for &v in &ints {
+            assert_eq!(r.varint_i().unwrap(), v);
+        }
         assert!(r.is_empty());
     }
 
@@ -281,7 +290,12 @@ mod tests {
 
     #[test]
     fn bits_round_trip() {
-        for bits in [vec![], vec![true], vec![false; 10], vec![true, true, false, true, false, false]] {
+        for bits in [
+            vec![],
+            vec![true],
+            vec![false; 10],
+            vec![true, true, false, true, false, false],
+        ] {
             let mut w = ByteWriter::default();
             w.bits(&bits);
             assert_eq!(ByteReader::new(&w.buf).bits(bits.len()).unwrap(), bits);

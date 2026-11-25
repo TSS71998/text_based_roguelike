@@ -2,37 +2,46 @@ use crate::engine::RandomNumberGenerator;
 
 pub struct RandomEntry {
     name: String,
-    weight: i32
+    weight: i32,
 }
 
 impl RandomEntry {
-    pub fn new<S:ToString>(name: S, weight: i32) -> RandomEntry {
-        RandomEntry { name: name.to_string(), weight }
+    pub fn new<S: ToString>(name: S, weight: i32) -> RandomEntry {
+        RandomEntry {
+            name: name.to_string(),
+            weight,
+        }
     }
 }
 
 #[derive(Default)]
 pub struct RandomTable {
     entries: Vec<RandomEntry>,
-    total_weights: i32
+    total_weights: i32,
 }
 
 impl RandomTable {
     pub fn new() -> RandomTable {
-        RandomTable { entries: Vec::new(), total_weights: 0 }
+        RandomTable {
+            entries: Vec::new(),
+            total_weights: 0,
+        }
     }
 
-    pub fn add<S:ToString>(mut self, name: S, weight: i32) -> RandomTable {
+    pub fn add<S: ToString>(mut self, name: S, weight: i32) -> RandomTable {
         if weight > 0 {
             self.total_weights += weight;
-            self.entries.push(RandomEntry::new(name.to_string(), weight));
+            self.entries
+                .push(RandomEntry::new(name.to_string(), weight));
         }
         self
     }
 
     pub fn roll(&self, rng: &mut RandomNumberGenerator) -> String {
-        if self.total_weights == 0 { return "None".to_string();}
-        let mut roll = rng.roll_dice(1, self.total_weights)-1;
+        if self.total_weights == 0 {
+            return "None".to_string();
+        }
+        let mut roll = rng.roll_dice(1, self.total_weights) - 1;
 
         for entry in &self.entries {
             if roll < entry.weight {
@@ -43,4 +52,3 @@ impl RandomTable {
         "None".to_string()
     }
 }
-

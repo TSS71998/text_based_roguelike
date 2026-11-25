@@ -1,9 +1,13 @@
-use super::{MetaMapBuilder, BuilderMap, TileType, paint, Symmetry, Rect};
+use super::{BuilderMap, MetaMapBuilder, Rect, Symmetry, TileType, paint};
 pub struct RoomExploder {}
 
 impl MetaMapBuilder for RoomExploder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         self.build(rng, build_data);
     }
 }
@@ -11,10 +15,14 @@ impl MetaMapBuilder for RoomExploder {
 impl RoomExploder {
     #[allow(dead_code)]
     pub fn new() -> Box<RoomExploder> {
-        Box::new(RoomExploder{})
+        Box::new(RoomExploder {})
     }
 
-    fn build(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(
+        &mut self,
+        rng: &mut crate::engine::RandomNumberGenerator,
+        build_data: &mut BuilderMap,
+    ) {
         let rooms: Vec<Rect>;
         if let Some(rooms_builder) = &build_data.rooms {
             rooms = rooms_builder.clone();
@@ -26,7 +34,7 @@ impl RoomExploder {
             let start = room.center();
             let n_diggers = rng.roll_dice(1, 20) - 5;
             if n_diggers > 0 {
-                for _i in 0 .. n_diggers {
+                for _i in 0..n_diggers {
                     let mut drunk_x = start.0;
                     let mut drunk_y = start.1;
 
@@ -43,10 +51,26 @@ impl RoomExploder {
 
                         let stagger_direction = rng.roll_dice(1, 4);
                         match stagger_direction {
-                            1 => {if drunk_x > 2 {drunk_x -= 1;}}
-                            2 => {if drunk_x < build_data.map.width - 2 {drunk_x += 1;}}
-                            3 => {if drunk_y > 2 {drunk_y -= 1;}}
-                            _ => {if drunk_y < build_data.map.height - 2 {drunk_y += 1;}}
+                            1 => {
+                                if drunk_x > 2 {
+                                    drunk_x -= 1;
+                                }
+                            }
+                            2 => {
+                                if drunk_x < build_data.map.width - 2 {
+                                    drunk_x += 1;
+                                }
+                            }
+                            3 => {
+                                if drunk_y > 2 {
+                                    drunk_y -= 1;
+                                }
+                            }
+                            _ => {
+                                if drunk_y < build_data.map.height - 2 {
+                                    drunk_y += 1;
+                                }
+                            }
                         }
 
                         drunk_life -= 1;

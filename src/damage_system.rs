@@ -1,24 +1,40 @@
+use crate::{
+    Attributes, Equipped, InBackpack, LootTable, mana_at_level, particle_system::ParticleBuilder,
+    player_hp_at_level,
+};
 use specs::prelude::*;
-use crate::{Attributes, Equipped, InBackpack, LootTable, mana_at_level, particle_system::ParticleBuilder, player_hp_at_level};
 
-use super::{SufferDamage, Player, Name, gamelog::GameLog, RunState, Map, Position, Pools};
+use super::{Map, Name, Player, Pools, Position, RunState, SufferDamage, gamelog::GameLog};
 
 pub struct DamageSystem {}
 
 impl<'a> System<'a> for DamageSystem {
-    type SystemData = ( WriteStorage<'a, Pools>,
-                        WriteStorage<'a, SufferDamage>,
-                        ReadStorage<'a, Position>,
-                        WriteExpect<'a, Map>,
-                        Entities<'a>,
-                        ReadExpect<'a, Entity>,
-                        ReadStorage<'a, Attributes>,
-                        WriteExpect<'a, GameLog>,
-                        WriteExpect<'a, ParticleBuilder>,
-                        ReadExpect<'a, crate::engine::Point>);
+    type SystemData = (
+        WriteStorage<'a, Pools>,
+        WriteStorage<'a, SufferDamage>,
+        ReadStorage<'a, Position>,
+        WriteExpect<'a, Map>,
+        Entities<'a>,
+        ReadExpect<'a, Entity>,
+        ReadStorage<'a, Attributes>,
+        WriteExpect<'a, GameLog>,
+        WriteExpect<'a, ParticleBuilder>,
+        ReadExpect<'a, crate::engine::Point>,
+    );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut stats, mut damage, positions, mut map, entities, player_entity, attributes, mut log, mut particles, player_pos) = data;
+        let (
+            mut stats,
+            mut damage,
+            positions,
+            mut map,
+            entities,
+            player_entity,
+            attributes,
+            mut log,
+            mut particles,
+            player_pos,
+        ) = data;
         let mut xp_gain = 0;
 
         for (entity, stats, damage) in (&entities, &mut stats, &damage).join() {
@@ -27,7 +43,9 @@ impl<'a> System<'a> for DamageSystem {
                 let pos = positions.get(entity);
                 if let Some(pos) = pos {
                     let idx = map.xy_idx(pos.x, pos.y);
-                    if let Some(b) = map.bloodstains.get_mut(idx) {*b = true};
+                    if let Some(b) = map.bloodstains.get_mut(idx) {
+                        *b = true
+                    };
                 }
 
                 if stats.hit_points.current < 1 && dmg.1 {
@@ -48,25 +66,28 @@ impl<'a> System<'a> for DamageSystem {
                 player_stats.level += 1;
                 player_stats.hit_points.max = player_hp_at_level(
                     player_attributes.fitness.base + player_attributes.fitness.modifiers,
-                    player_stats.level
+                    player_stats.level,
                 );
                 player_stats.hit_points.current = player_stats.hit_points.max;
                 player_stats.mana.max = mana_at_level(
                     player_attributes.intelligence.base + player_attributes.intelligence.modifiers,
-                    player_stats.level
+                    player_stats.level,
                 );
                 player_stats.mana.current = player_stats.mana.max;
-                log.entries.push(format!("Congratulations, you are not level {}", player_stats.level));
+                log.entries.push(format!(
+                    "Congratulations, you are not level {}",
+                    player_stats.level
+                ));
 
-                for i in 0 .. 10 {
-                    if player_pos. y - i > 1 {
+                for i in 0..10 {
+                    if player_pos.y - i > 1 {
                         particles.requests(
                             player_pos.x,
-                            player_pos.y -1, 
+                            player_pos.y - 1,
                             crate::engine::RGB::named(crate::engine::GOLD),
-                            crate::engine::RGB::named(crate::engine::BLACK), 
-                            crate::engine::to_cp437('░'), 
-                            200.0
+                            crate::engine::RGB::named(crate::engine::BLACK),
+                            crate::engine::to_cp437('░'),
+                            200.0,
                         );
                     }
                 }
@@ -86,7 +107,7 @@ pub fn delete_the_dead(ecs: &mut World) {
         let entities = ecs.entities();
         let mut log = ecs.write_resource::<GameLog>();
         for (entity, stats) in (&entities, &combat_stats).join() {
-            if stats.hit_points.current < 1{
+            if stats.hit_points.current < 1 {
                 let player = players.get(entity);
                 match player {
                     None => {
@@ -134,7 +155,7 @@ pub fn delete_the_dead(ecs: &mut World) {
                 let drop_finder = crate::raws::get_item_drop(
                     &crate::raws::RAWS.lock().unwrap(),
                     &mut rng,
-                    &table.table
+                    &table.table,
                 );
                 if let Some(tag) = drop_finder {
                     if let Some(pos) = pos {
@@ -147,7 +168,9 @@ pub fn delete_the_dead(ecs: &mut World) {
         for drop in to_drop.iter() {
             equipped.remove(drop.0);
             carried.remove(drop.0);
-            positions.insert(drop.0, drop.1.clone()).expect("Unable to insert position.");
+            positions
+                .insert(drop.0, drop.1.clone())
+                .expect("Unable to insert position.");
         }
     }
 
@@ -155,9 +178,12 @@ pub fn delete_the_dead(ecs: &mut World) {
         for drop in to_spawn.iter() {
             crate::raws::spawn_named_item(
                 &crate::raws::RAWS.lock().unwrap(),
-                ecs, 
-                &drop.0, 
-                crate::raws::SpawnType::AtPosition { x: drop.1.x, y: drop.1.y }
+                ecs,
+                &drop.0,
+                crate::raws::SpawnType::AtPosition {
+                    x: drop.1.x,
+                    y: drop.1.y,
+                },
             );
         }
     }

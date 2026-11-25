@@ -1,28 +1,43 @@
+use super::{
+    EntityMoved, EntryTrigger, Hidden, InflictsDamage, Map, Name, Position, SingleActivation,
+    SufferDamage, gamelog::GameLog, particle_system::ParticleBuilder,
+};
 use specs::prelude::*;
-use super::{EntityMoved, Position, EntryTrigger, Hidden, Map, Name, gamelog::GameLog,
-            InflictsDamage, particle_system::ParticleBuilder, SufferDamage, SingleActivation};
 
 pub struct TriggerSystem {}
 
 impl<'a> System<'a> for TriggerSystem {
     #[allow(clippy::type_complexity)]
-    type SystemData = ( ReadExpect<'a, Map>,
-                        WriteStorage<'a, EntityMoved>,
-                        ReadStorage<'a, Position>,
-                        ReadStorage<'a, EntryTrigger>,
-                        WriteStorage<'a, Hidden>,
-                        ReadStorage<'a, Name>,
-                        Entities<'a>,
-                        WriteExpect<'a, GameLog>,
-                        ReadStorage<'a, InflictsDamage>,
-                        WriteExpect<'a, ParticleBuilder>,
-                        WriteStorage<'a, SufferDamage>,
-                        ReadStorage<'a, SingleActivation>
-                        );
-    
+    type SystemData = (
+        ReadExpect<'a, Map>,
+        WriteStorage<'a, EntityMoved>,
+        ReadStorage<'a, Position>,
+        ReadStorage<'a, EntryTrigger>,
+        WriteStorage<'a, Hidden>,
+        ReadStorage<'a, Name>,
+        Entities<'a>,
+        WriteExpect<'a, GameLog>,
+        ReadStorage<'a, InflictsDamage>,
+        WriteExpect<'a, ParticleBuilder>,
+        WriteStorage<'a, SufferDamage>,
+        ReadStorage<'a, SingleActivation>,
+    );
+
     fn run(&mut self, data: Self::SystemData) {
-        let (map, mut entity_moved, position, entry_trigger, mut hidden, names, entities, mut gamelog, inflicts_damage, 
-            mut particle_builder, mut do_damage, single_activation) = data;
+        let (
+            map,
+            mut entity_moved,
+            position,
+            entry_trigger,
+            mut hidden,
+            names,
+            entities,
+            mut gamelog,
+            inflicts_damage,
+            mut particle_builder,
+            mut do_damage,
+            single_activation,
+        ) = data;
 
         let mut remove_entities: Vec<Entity> = Vec::new();
         for (entity, mut _entity_moved, pos) in (&entities, &entity_moved, &position).join() {
@@ -42,8 +57,20 @@ impl<'a> System<'a> for TriggerSystem {
 
                             let damage = inflicts_damage.get(entity_id);
                             if let Some(damage) = damage {
-                                particle_builder.requests(pos.x, pos.y, crate::engine::RGB::named(crate::engine::ORANGE), crate::engine::RGB::named(crate::engine::BLACK), crate::engine::to_cp437('‼'), 200.0);
-                                SufferDamage::new_damage(&mut do_damage, entity, damage.damage, false);
+                                particle_builder.requests(
+                                    pos.x,
+                                    pos.y,
+                                    crate::engine::RGB::named(crate::engine::ORANGE),
+                                    crate::engine::RGB::named(crate::engine::BLACK),
+                                    crate::engine::to_cp437('‼'),
+                                    200.0,
+                                );
+                                SufferDamage::new_damage(
+                                    &mut do_damage,
+                                    entity,
+                                    damage.damage,
+                                    false,
+                                );
                             }
 
                             let sa = single_activation.get(entity_id);

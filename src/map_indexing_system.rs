@@ -1,20 +1,22 @@
-use specs::prelude::*;
 use crate::Pools;
+use specs::prelude::*;
 
-use super::{Map, Position, BlocksTile, spatial};
+use super::{BlocksTile, Map, Position, spatial};
 
 pub struct MapIndexingSystem {}
 
 impl<'a> System<'a> for MapIndexingSystem {
-    type SystemData = ( WriteExpect<'a, Map>,
-                        ReadStorage<'a, Position>,
-                        ReadStorage<'a, BlocksTile>,
-                        ReadStorage<'a, Pools>,
-                        Entities<'a>);
-    
+    type SystemData = (
+        WriteExpect<'a, Map>,
+        ReadStorage<'a, Position>,
+        ReadStorage<'a, BlocksTile>,
+        ReadStorage<'a, Pools>,
+        Entities<'a>,
+    );
+
     fn run(&mut self, data: Self::SystemData) {
         let (map, position, blockers, pools, entities) = data;
-        
+
         spatial::clear();
         spatial::populate_blocked_from_map(&*map);
         for (entity, position) in (&entities, &position).join() {

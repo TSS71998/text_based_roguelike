@@ -1,19 +1,23 @@
+use crate::{Confusion, MyTurn, RunState};
 use specs::prelude::*;
-use crate::{MyTurn, Confusion, RunState};
 
 pub struct TurnStatusSystem {}
 
 impl<'a> System<'a> for TurnStatusSystem {
     #[allow(clippy::type_complexity)]
-    type SystemData = ( WriteStorage<'a, MyTurn>,
-                        WriteStorage<'a, Confusion>,
-                        Entities<'a>,
-                        ReadExpect<'a, RunState>);
+    type SystemData = (
+        WriteStorage<'a, MyTurn>,
+        WriteStorage<'a, Confusion>,
+        Entities<'a>,
+        ReadExpect<'a, RunState>,
+    );
 
     fn run(&mut self, data: Self::SystemData) {
         let (mut turns, mut confusion, entities, runstate) = data;
 
-        if *runstate != RunState::Ticking {return;}
+        if *runstate != RunState::Ticking {
+            return;
+        }
 
         let mut not_my_turn: Vec<Entity> = Vec::new();
         let mut not_confused: Vec<Entity> = Vec::new();

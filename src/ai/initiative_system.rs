@@ -1,24 +1,38 @@
+use crate::{Attributes, Initiative, MyTurn, Position, RunState};
 use specs::prelude::*;
-use crate::{Initiative, Position, MyTurn, Attributes, RunState};
 
 pub struct InitiativeSystem {}
 
 impl<'a> System<'a> for InitiativeSystem {
     #[allow(clippy::type_complexity)]
-    type SystemData = ( WriteStorage<'a, Initiative>,
-                        ReadStorage<'a, Position>,
-                        WriteStorage<'a, MyTurn>,
-                        Entities<'a>,
-                        WriteExpect<'a, crate::engine::RandomNumberGenerator>,
-                        ReadStorage<'a, Attributes>,
-                        WriteExpect<'a, RunState>,
-                        ReadExpect<'a, Entity>,
-                        ReadExpect<'a, crate::engine::Point>);
+    type SystemData = (
+        WriteStorage<'a, Initiative>,
+        ReadStorage<'a, Position>,
+        WriteStorage<'a, MyTurn>,
+        Entities<'a>,
+        WriteExpect<'a, crate::engine::RandomNumberGenerator>,
+        ReadStorage<'a, Attributes>,
+        WriteExpect<'a, RunState>,
+        ReadExpect<'a, Entity>,
+        ReadExpect<'a, crate::engine::Point>,
+    );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut initiatives, positions, mut turns, entities, mut rng, attributes, mut runstate, player, player_pos) = data;
+        let (
+            mut initiatives,
+            positions,
+            mut turns,
+            entities,
+            mut rng,
+            attributes,
+            mut runstate,
+            player,
+            player_pos,
+        ) = data;
 
-        if *runstate != RunState::Ticking {return;}
+        if *runstate != RunState::Ticking {
+            return;
+        }
 
         turns.clear();
 
@@ -36,14 +50,17 @@ impl<'a> System<'a> for InitiativeSystem {
                 if entity == *player {
                     *runstate = RunState::AwaitingInput;
                 } else {
-                    let distance = crate::engine::DistanceAlg::Pythagoras.distance2d(*player_pos, crate::engine::Point::new(pos.x, pos.y));
+                    let distance = crate::engine::DistanceAlg::Pythagoras
+                        .distance2d(*player_pos, crate::engine::Point::new(pos.x, pos.y));
                     if distance > 20.0 {
                         myturn = false;
                     }
                 }
 
                 if myturn {
-                    turns.insert(entity, MyTurn {}).expect("Unable to insert turn");
+                    turns
+                        .insert(entity, MyTurn {})
+                        .expect("Unable to insert turn");
                 }
             }
         }

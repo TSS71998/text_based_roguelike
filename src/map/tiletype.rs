@@ -1,11 +1,11 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Copy, Clone, Debug, Serialize, Deserialize, Eq, Hash)]
 pub enum TileType {
-    Wall, 
-    Stalactite, 
+    Wall,
+    Stalactite,
     Stalagmite,
-    Floor, 
+    Floor,
     DownStairs,
     Road,
     Grass,
@@ -14,7 +14,7 @@ pub enum TileType {
     WoodFloor,
     Bridge,
     Gravel,
-    UpStairs
+    UpStairs,
 }
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq)]
@@ -36,7 +36,12 @@ pub struct TileDef {
 }
 
 const fn def(walkable: bool, opaque: bool, cost: f32, shape: TileShape) -> TileDef {
-    TileDef { walkable, opaque, cost, shape }
+    TileDef {
+        walkable,
+        opaque,
+        cost,
+        shape,
+    }
 }
 
 pub const fn tile_def(tt: TileType) -> TileDef {

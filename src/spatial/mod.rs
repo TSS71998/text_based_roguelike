@@ -1,24 +1,24 @@
-use std::sync::{LazyLock, Mutex, MutexGuard};
-use specs::prelude::*;
 use crate::{Map, RunState, tile_walkable};
+use specs::prelude::*;
+use std::sync::{LazyLock, Mutex, MutexGuard};
 
 struct SpatialMap {
     blocked: Vec<(bool, bool)>,
-    tile_content: Vec<Vec<(Entity, bool)>>
+    tile_content: Vec<Vec<(Entity, bool)>>,
 }
 
 impl SpatialMap {
     fn new() -> Self {
         Self {
             blocked: Vec::new(),
-            tile_content: Vec::new()
+            tile_content: Vec::new(),
         }
     }
 }
 
 static SPATIAL_MAP: LazyLock<Mutex<SpatialMap>> = LazyLock::new(|| Mutex::new(SpatialMap::new()));
 
-pub struct SpatialGuard (MutexGuard<'static, SpatialMap>);
+pub struct SpatialGuard(MutexGuard<'static, SpatialMap>);
 
 impl SpatialGuard {
     #[inline]
@@ -29,7 +29,7 @@ impl SpatialGuard {
 
     #[inline]
     pub fn content(&self, idx: usize) -> impl Iterator<Item = Entity> + '_ {
-        self.0.tile_content[idx].iter().map(|(e,_)| *e)
+        self.0.tile_content[idx].iter().map(|(e, _)| *e)
     }
 }
 
@@ -45,7 +45,10 @@ pub fn set_size(map_tile_count: usize) {
 
 pub fn clear() {
     let mut lock = SPATIAL_MAP.lock().unwrap();
-    lock.blocked.iter_mut().for_each(|b| {b.0 = false; b.1 = false;});
+    lock.blocked.iter_mut().for_each(|b| {
+        b.0 = false;
+        b.1 = false;
+    });
     for content in lock.tile_content.iter_mut() {
         content.clear();
     }
@@ -68,11 +71,12 @@ pub fn index_entity(entity: Entity, idx: usize, blocks_tile: bool) {
 
 pub fn is_blocked(idx: usize) -> bool {
     let lock = SPATIAL_MAP.lock().unwrap();
-    lock.blocked[idx].0 || lock.blocked[idx].1 
+    lock.blocked[idx].0 || lock.blocked[idx].1
 }
 
 pub fn for_each_tile_content<F>(idx: usize, mut f: F)
-where F: FnMut(Entity)
+where
+    F: FnMut(Entity),
 {
     let lock = SPATIAL_MAP.lock().unwrap();
     for entity in lock.tile_content[idx].iter() {
@@ -95,14 +99,25 @@ pub fn move_entity(entity: Entity, moving_from: usize, moving_to: usize) {
 
     let mut from_blocked = false;
     let mut to_blocked = false;
-    lock.tile_content[moving_from].iter().for_each(|(_, blocks)| if *blocks {from_blocked = true;});
-    lock.tile_content[moving_to].iter().for_each(|(_, blocks)| if *blocks {to_blocked = true;});
+    lock.tile_content[moving_from]
+        .iter()
+        .for_each(|(_, blocks)| {
+            if *blocks {
+                from_blocked = true;
+            }
+        });
+    lock.tile_content[moving_to].iter().for_each(|(_, blocks)| {
+        if *blocks {
+            to_blocked = true;
+        }
+    });
     lock.blocked[moving_from].1 = from_blocked;
     lock.blocked[moving_to].1 = to_blocked;
 }
 
 pub fn for_each_tile_content_with_gamemode<F>(idx: usize, mut f: F) -> RunState
-where F: FnMut(Entity) -> Option<RunState>
+where
+    F: FnMut(Entity) -> Option<RunState>,
 {
     let lock = SPATIAL_MAP.lock().unwrap();
     for entity in lock.tile_content[idx].iter() {
@@ -118,6 +133,10 @@ pub fn remove_entity(entity: Entity, idx: usize) {
     let mut lock = SPATIAL_MAP.lock().unwrap();
     lock.tile_content[idx].retain(|(e, _)| *e != entity);
     let mut from_blocked = false;
-    lock.tile_content[idx].iter().for_each(|(_, blocks)| if *blocks { from_blocked = true;});
+    lock.tile_content[idx].iter().for_each(|(_, blocks)| {
+        if *blocks {
+            from_blocked = true;
+        }
+    });
     lock.blocked[idx].1 = from_blocked;
 }
