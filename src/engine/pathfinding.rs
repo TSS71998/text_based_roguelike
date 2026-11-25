@@ -267,8 +267,7 @@ pub fn field_of_view(origin: Point, range: i32, map: &dyn Algorithm2D) -> Vec<Po
 #[cfg(test)]
 mod tests {
     use super::*;
- 
-    /// '#' = wall, '.' = floor.
+
     struct Grid {
         w: i32,
         h: i32,
