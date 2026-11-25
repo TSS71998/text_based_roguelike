@@ -28,7 +28,7 @@ impl<'a> System<'a> for ApproachAI {
         {
             if (GAME_TICK.load(Ordering::Relaxed) as u32 + entity.id()) % RESTAGGER == 3 {
                 turn_done.push(entity);
-                let path = rltk::a_star_search(
+                let path = crate::engine::a_star_search(
                     map.xy_idx(pos.x, pos.y),
                     map.xy_idx(approach.idx % map.width, approach.idx / map.width),
                     &mut *map

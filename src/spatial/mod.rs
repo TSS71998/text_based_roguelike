@@ -1,4 +1,4 @@
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{LazyLock, Mutex, MutexGuard};
 use specs::prelude::*;
 use crate::{Map, RunState, tile_walkable};
 
@@ -16,9 +16,7 @@ impl SpatialMap {
     }
 }
 
-lazy_static!{
-    static ref SPATIAL_MAP: Mutex<SpatialMap> = Mutex::new(SpatialMap::new());
-}
+static SPATIAL_MAP: LazyLock<Mutex<SpatialMap>> = LazyLock::new(|| Mutex::new(SpatialMap::new()));
 
 pub struct SpatialGuard (MutexGuard<'static, SpatialMap>);
 

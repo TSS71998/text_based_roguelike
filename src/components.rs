@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use specs::prelude::*;
 use specs_derive::*;
-use rltk::{RGB};
+use crate::engine::{RGB};
 use serde::{Serialize, Deserialize};
 use specs::saveload::{Marker, ConvertSaveload};
 use std::convert::Infallible as NoError;
@@ -13,9 +13,14 @@ pub struct Position{
     pub y: i32,
 }
 
+#[derive(Component, ConvertSaveload, Clone, Copy, Default)]
+pub struct Facing {
+    pub dir: crate::engine::Direction
+}
+
 #[derive(Component, ConvertSaveload, Clone)]
 pub struct Renderable {
-    pub glyph: rltk::FontCharType,
+    pub glyph: crate::engine::FontCharType,
     pub fg: RGB,
     pub bg: RGB,
     pub render_order: i32
@@ -26,7 +31,7 @@ pub struct Player{}
 
 #[derive(Component, ConvertSaveload, Clone)]
 pub struct Viewshed {
-    pub visible_tiles: Vec<rltk::Point>,
+    pub visible_tiles: Vec<crate::engine::Point>,
     pub range: i32,
     pub dirty: bool
 }
@@ -84,7 +89,7 @@ pub struct WantsToPickupItem {
 #[derive(Component, Debug,ConvertSaveload)]
 pub struct WantsToUseItem {
     pub item: Entity,
-    pub target: Option<rltk::Point>
+    pub target: Option<crate::engine::Point>
 }
 
 #[derive(Component, Debug, ConvertSaveload)]

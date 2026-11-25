@@ -15,7 +15,7 @@ impl<'a> System<'a> for DefaultMoveAI {
                         WriteExpect<'a, Map>,
                         WriteStorage<'a, Viewshed>,
                         WriteStorage<'a, EntityMoved>,
-                        WriteExpect<'a, rltk::RandomNumberGenerator>,
+                        WriteExpect<'a, crate::engine::RandomNumberGenerator>,
                         Entities<'a>,
                         );
 
@@ -75,7 +75,7 @@ impl<'a> System<'a> for DefaultMoveAI {
                         let idx = map.xy_idx(target_x, target_y);
                         if tile_walkable(map.tiles[idx]) {
                             if (GAME_TICK.load(Ordering::Relaxed) as u32 + entity.id()) % RESTAGGER == 3{
-                                let path = rltk::a_star_search(
+                                let path = crate::engine::a_star_search(
                                     map.xy_idx(pos.x, pos.y),
                                     map.xy_idx(target_x, target_y), 
                                     &mut *map

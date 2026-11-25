@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use rltk::{Point, RGB};
+use crate::engine::{Point, RGB};
 use specs::prelude::*;
 use super::{LightSource, Map, Position, Viewshed};
 
@@ -141,7 +141,7 @@ fn compute_mask(map: &Map, x:i32, y: i32, range: i32) -> Vec<(u32, f32)> {
     let max_radius = (range as f32 + SOFT_EDGE) * (1.0 + FLICKER_RADIUS);
     let fov_radius = max_radius.ceil() as i32;
     let origin = Point::new(x, y);
-    rltk::field_of_view(origin, fov_radius, map)
+    crate::engine::field_of_view(origin, fov_radius, map)
         .into_iter()
         .filter(|p| p.x > 0 && p.x < map.width - 1 && p.y > 0 && p.y < map.height - 1)
         .filter_map(|p| {

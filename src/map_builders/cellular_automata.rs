@@ -3,14 +3,14 @@ pub struct CellularAutomataBuilder {}
 
 impl InitialMapBuilder for CellularAutomataBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }
 
 impl MetaMapBuilder for CellularAutomataBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, _rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, _rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.apply_iteration(build_data);
     }
 }
@@ -22,7 +22,7 @@ impl CellularAutomataBuilder {
     }
 
     #[allow(clippy::map_entry)]
-    fn build(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         for y in 1..build_data.map.height - 1 {
             for x in 1..build_data.map.width - 1 {
                 let roll = rng.roll_dice(1, 100);

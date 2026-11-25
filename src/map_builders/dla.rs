@@ -1,5 +1,5 @@
 use super::{InitialMapBuilder, MetaMapBuilder, BuilderMap, TileType, Position, Symmetry, paint};
-use rltk::RandomNumberGenerator;
+use crate::engine::RandomNumberGenerator;
 
 #[derive(PartialEq, Copy, Clone)]
 #[allow(dead_code)]
@@ -15,14 +15,14 @@ pub struct DLABuilder {
 
 impl InitialMapBuilder for DLABuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data : &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data : &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }
 
 impl MetaMapBuilder for DLABuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data : &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data : &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }
@@ -152,10 +152,10 @@ impl DLABuilder {
                     let mut prev_y = digger_y;
                     let mut digger_idx = build_data.map.xy_idx(digger_x, digger_y);
 
-                    let mut path = rltk::line2d(
-                        rltk::LineAlg::Bresenham,
-                        rltk::Point::new( digger_x, digger_y ),
-                        rltk::Point::new( starting_position.x, starting_position.y )
+                    let mut path = crate::engine::line2d(
+                        crate::engine::LineAlg::Bresenham,
+                        crate::engine::Point::new( digger_x, digger_y ),
+                        crate::engine::Point::new( starting_position.x, starting_position.y )
                     );
 
                     while build_data.map.tiles[digger_idx] == TileType::Wall && !path.is_empty() {

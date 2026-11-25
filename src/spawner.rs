@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use rltk::{RGB, RandomNumberGenerator};
+use crate::engine::{RGB, RandomNumberGenerator};
 use specs::prelude::*;
-use crate::{EquipmentChanged, Faction, Initiative};
+use crate::{EquipmentChanged, Facing, Faction, Initiative};
 
 use super::{Player, Renderable, Name, Position, Viewshed, Rect, 
             SerializeMe,random_table::RandomTable, HungerClock, HungerState, Map, TileType, raws::*,
@@ -19,10 +19,11 @@ pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
     let player = ecs
         .create_entity()
         .with(Position {x: player_x, y: player_y})
+        .with(Facing::default())
         .with(Renderable {
-            glyph: rltk::to_cp437('@'),
-            fg: RGB::named(rltk::YELLOW),
-            bg: RGB::named(rltk::BLACK),
+            glyph: crate::engine::to_cp437('@'),
+            fg: RGB::named(crate::engine::YELLOW),
+            bg: RGB::named(crate::engine::BLACK),
             render_order: 0
         })
         .with(Player{})
@@ -50,7 +51,7 @@ pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
             total_weight: 0.0,
             total_initiative_penalty: 0.0
         })
-        .with(LightSource::flickering(rltk::RGB::from_f32(1.0, 1.0, 0.5), 8, 0.25))
+        .with(LightSource::flickering(crate::engine::RGB::from_f32(1.0, 1.0, 0.5), 8, 0.25))
         .with(Initiative{current: 0})
         .with(Faction{name: "Player".to_string()})
         .with(EquipmentChanged{})
@@ -120,5 +121,5 @@ pub fn spawn_entity(ecs: &mut World, spawn: &(&usize, &String)) {
         return;
     }
 
-    rltk::console::log(format!("WARNING: Don't know how to spawn [{}]!", spawn.1));
+    crate::engine::log(format!("WARNING: Don't know how to spawn [{}]!", spawn.1));
 }

@@ -9,9 +9,9 @@ impl<'a> System<'a> for QuipSystem {
                         WriteStorage<'a, Quips>,
                         ReadStorage<'a, Name>,
                         ReadStorage<'a, MyTurn>,
-                        ReadExpect<'a, rltk::Point>,
+                        ReadExpect<'a, crate::engine::Point>,
                         ReadStorage<'a, Viewshed>,
-                        WriteExpect<'a, rltk::RandomNumberGenerator>);
+                        WriteExpect<'a, crate::engine::RandomNumberGenerator>);
     
     fn run(&mut self, data: Self::SystemData) {
         let (mut gamelog, mut quips, names, turns, player_pos, viewsheds, mut rng) = data;

@@ -5,10 +5,9 @@ authors = ["Camden Tuttle"]
 edition = "2024"
 
 [dependencies]
-rltk = { version = "0.8.0", features = ["serde"] }
-specs = { version ="0.20.0", features = ["serde"]}
+specs = { version = "0.20.0", default-features = false, features = ["serde"] }
 specs-derive = "0.4.1"
-serde = {version = "1.0.93", features = ["derive"]}
+serde = { version = "1.0.93", features = ["derive"] }
 serde_json = "1.0.39"
 lazy_static = "1.4.0"
 bitvec ={version = "1", features = ["serde"]}
@@ -46,19 +45,6 @@ panic = "unwind"
 [profile.dev]
 opt-level = 1
 
-# Dependencies (rltk, specs, rayon, serde) are the hot code; optimize them even in dev builds.
+# Dependencies (specs, serde, miniz_oxide) are the hot code; optimize them even in dev builds.
 [profile.dev.package."*"]
 opt-level = 3
-
-[patch.crates-io]
-rltk = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
-bracket-lib = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
-bracket-terminal = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
-bracket-color = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
-bracket-geometry = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
-bracket-random = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
-bracket-noise = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
-bracket-pathfinding = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
-bracket-algorithm-traits = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
-bracket-embedding = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }
-bracket-rex = { git = "https://github.com/amethyst/bracket-lib", rev = "851f6f08675444fb6fa088b9e67bee9fd75554c6" }

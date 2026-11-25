@@ -17,7 +17,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         ReadStorage<'a, Position>,
                         ReadStorage<'a, HungerClock>,
                         ReadStorage<'a, Pools>,
-                        WriteExpect<'a, rltk::RandomNumberGenerator>,
+                        WriteExpect<'a, crate::engine::RandomNumberGenerator>,
                         ReadStorage<'a, Equipped>,
                         ReadStorage<'a, MeleeWeapon>,
                         ReadStorage<'a, Wearable>,
@@ -102,18 +102,18 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     log.entries.push(format!("{} hits {}, for {} hp.", &name.name, &target_name.name, damage));
                     events.push(GameEvent::Attack { attacker: entity, target: wants_melee.target, damage: Some(damage) });
                     if let Some(pos) = positions.get(wants_melee.target) {
-                        particle_builder.requests(pos.x, pos.y, rltk::RGB::named(rltk::ORANGE), rltk::RGB::named(rltk::BLACK), rltk::to_cp437('‼'), 200.0);
+                        particle_builder.requests(pos.x, pos.y, crate::engine::RGB::named(crate::engine::ORANGE), crate::engine::RGB::named(crate::engine::BLACK), crate::engine::to_cp437('‼'), 200.0);
                     }
                 } else if natural_roll == 1 {
                     log.entries.push(format!("{} considers attacking {}, but was too shy to try", &name.name, &target_name.name));
                     if let Some(pos) = positions.get(wants_melee.target) {
-                        particle_builder.requests(pos.x, pos.y, rltk::RGB::named(rltk::ORANGE), rltk::RGB::named(rltk::BLACK), rltk::to_cp437('‼'), 200.0);
+                        particle_builder.requests(pos.x, pos.y, crate::engine::RGB::named(crate::engine::ORANGE), crate::engine::RGB::named(crate::engine::BLACK), crate::engine::to_cp437('‼'), 200.0);
                     }
                 } else {
                     log.entries.push(format!("{} attacks {}, but misses", &name.name, &target_name.name));
                     events.push(GameEvent::Attack { attacker: entity, target: wants_melee.target, damage: None });
                     if let Some(pos) = positions.get(wants_melee.target) {
-                        particle_builder.requests(pos.x, pos.y, rltk::RGB::named(rltk::ORANGE), rltk::RGB::named(rltk::BLACK), rltk::to_cp437('‼'), 200.0);
+                        particle_builder.requests(pos.x, pos.y, crate::engine::RGB::named(crate::engine::ORANGE), crate::engine::RGB::named(crate::engine::BLACK), crate::engine::to_cp437('‼'), 200.0);
                     }
                 }
             }

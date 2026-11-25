@@ -1,5 +1,5 @@
 use super::{InitialMapBuilder, MetaMapBuilder, BuilderMap, TileType, Position};
-use rltk::RandomNumberGenerator;
+use crate::engine::RandomNumberGenerator;
 pub mod prefab_level;
 pub mod prefab_sections;
 pub mod prefab_room;
@@ -20,14 +20,14 @@ pub struct PrefabBuilder {
 }
 
 impl MetaMapBuilder for PrefabBuilder {
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data : &mut BuilderMap)  {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data : &mut BuilderMap)  {
         self.build(rng, build_data);
     }
 }
 
 impl InitialMapBuilder for PrefabBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data : &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data : &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }
@@ -110,14 +110,14 @@ impl PrefabBuilder {
                 build_data.spawn_list.push((idx, "Health Potion".to_string()));
             }
             _ => {
-                rltk::console::log(format!("Unknown glyph loading map: {}", (ch as u8) as char));
+                crate::engine::log(format!("Unknown glyph loading map: {}", (ch as u8) as char));
             }
         }
     }
 
     #[allow(dead_code)]
     fn load_rex_map(&mut self, path: &str, build_data : &mut BuilderMap) {
-        let xp_file = rltk::rex::XpFile::from_resource(path).unwrap();
+        let xp_file = crate::rex_assets::load_xp(path).unwrap();
 
         for layer in &xp_file.layers {
             for y in 0..layer.height {

@@ -78,12 +78,12 @@ impl<'a> System<'a> for ItemUseSystem {
                             crate::spatial::for_each_tile_content(idx, |mob| targets.push(mob));
                         }
                         Some(area_effect) => {
-                            let mut blast_tiles = rltk::field_of_view(target, area_effect.radius, &*map);
+                            let mut blast_tiles = crate::engine::field_of_view(target, area_effect.radius, &*map);
                             blast_tiles.retain(|p| p.x > 0 && p.x < map.width-1 && p.y > 0 && p.y < map.height-1);
                             for tile_idx in blast_tiles.iter() {
                                 let idx = map.xy_idx(tile_idx.x, tile_idx.y);
                                 crate::spatial::for_each_tile_content(idx, |mob| targets.push(mob));
-                                particle_builder.requests(tile_idx.x, tile_idx.y, rltk::RGB::named(rltk::ORANGE), rltk::RGB::named(rltk::BLACK), rltk::to_cp437('░'), 200.0);
+                                particle_builder.requests(tile_idx.x, tile_idx.y, crate::engine::RGB::named(crate::engine::ORANGE), crate::engine::RGB::named(crate::engine::BLACK), crate::engine::to_cp437('░'), 200.0);
                             }
                         }
                     }
@@ -124,7 +124,7 @@ impl<'a> System<'a> for ItemUseSystem {
 
                         let pos = positions.get(*target);
                         if let Some(pos) = pos {
-                            particle_builder.requests(pos.x, pos.y, rltk::RGB::named(rltk::GREEN), rltk::RGB::named(rltk::BLACK), rltk::to_cp437('♥'), 200.0);
+                            particle_builder.requests(pos.x, pos.y, crate::engine::RGB::named(crate::engine::GREEN), crate::engine::RGB::named(crate::engine::BLACK), crate::engine::to_cp437('♥'), 200.0);
                         }
                     }
                     
@@ -201,7 +201,7 @@ impl<'a> System<'a> for ItemUseSystem {
 
                                 let pos = positions.get(*mob);
                                 if let Some(pos) = pos {
-                                    particle_builder.requests(pos.x, pos.y, rltk::RGB::named(rltk::MAGENTA), rltk::RGB::named(rltk::BLACK), rltk::to_cp437('?'), 200.0);
+                                    particle_builder.requests(pos.x, pos.y, crate::engine::RGB::named(crate::engine::MAGENTA), crate::engine::RGB::named(crate::engine::BLACK), crate::engine::to_cp437('?'), 200.0);
                                 }
                             }
                         }

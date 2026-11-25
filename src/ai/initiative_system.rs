@@ -9,11 +9,11 @@ impl<'a> System<'a> for InitiativeSystem {
                         ReadStorage<'a, Position>,
                         WriteStorage<'a, MyTurn>,
                         Entities<'a>,
-                        WriteExpect<'a, rltk::RandomNumberGenerator>,
+                        WriteExpect<'a, crate::engine::RandomNumberGenerator>,
                         ReadStorage<'a, Attributes>,
                         WriteExpect<'a, RunState>,
                         ReadExpect<'a, Entity>,
-                        ReadExpect<'a, rltk::Point>);
+                        ReadExpect<'a, crate::engine::Point>);
 
     fn run(&mut self, data: Self::SystemData) {
         let (mut initiatives, positions, mut turns, entities, mut rng, attributes, mut runstate, player, player_pos) = data;
@@ -36,7 +36,7 @@ impl<'a> System<'a> for InitiativeSystem {
                 if entity == *player {
                     *runstate = RunState::AwaitingInput;
                 } else {
-                    let distance = rltk::DistanceAlg::Pythagoras.distance2d(*player_pos, rltk::Point::new(pos.x, pos.y));
+                    let distance = crate::engine::DistanceAlg::Pythagoras.distance2d(*player_pos, crate::engine::Point::new(pos.x, pos.y));
                     if distance > 20.0 {
                         myturn = false;
                     }

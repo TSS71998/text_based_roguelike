@@ -1,10 +1,10 @@
 use super::{MetaMapBuilder, BuilderMap, spawner};
-use rltk::RandomNumberGenerator;
+use crate::engine::RandomNumberGenerator;
 
 pub struct RoomBasedSpawner {}
 
 impl MetaMapBuilder for RoomBasedSpawner {
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.build(rng, build_data)
     }
 }

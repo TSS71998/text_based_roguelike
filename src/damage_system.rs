@@ -15,7 +15,7 @@ impl<'a> System<'a> for DamageSystem {
                         ReadStorage<'a, Attributes>,
                         WriteExpect<'a, GameLog>,
                         WriteExpect<'a, ParticleBuilder>,
-                        ReadExpect<'a, rltk::Point>);
+                        ReadExpect<'a, crate::engine::Point>);
 
     fn run(&mut self, data: Self::SystemData) {
         let (mut stats, mut damage, positions, mut map, entities, player_entity, attributes, mut log, mut particles, player_pos) = data;
@@ -63,9 +63,9 @@ impl<'a> System<'a> for DamageSystem {
                         particles.requests(
                             player_pos.x,
                             player_pos.y -1, 
-                            rltk::RGB::named(rltk::GOLD),
-                            rltk::RGB::named(rltk::BLACK), 
-                            rltk::to_cp437('░'), 
+                            crate::engine::RGB::named(crate::engine::GOLD),
+                            crate::engine::RGB::named(crate::engine::BLACK), 
+                            crate::engine::to_cp437('░'), 
                             200.0
                         );
                     }
@@ -113,7 +113,7 @@ pub fn delete_the_dead(ecs: &mut World) {
         let mut carried = ecs.write_storage::<InBackpack>();
         let mut positions = ecs.write_storage::<Position>();
         let loot_tables = ecs.read_storage::<LootTable>();
-        let mut rng = ecs.write_resource::<rltk::RandomNumberGenerator>();
+        let mut rng = ecs.write_resource::<crate::engine::RandomNumberGenerator>();
         for victim in dead.iter() {
             let pos = positions.get(*victim);
             for (entity, equipped) in (&entities, &equipped).join() {

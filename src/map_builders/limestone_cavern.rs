@@ -1,8 +1,8 @@
 use super::{BuilderChain, DrunkardsWalkBuilder, XStart, YStart, AreaStartingPosition, 
     CullUnreachable, VoronoiSpawning, MetaMapBuilder, BuilderMap, TileType, DistantExit};
-use rltk::{RandomNumberGenerator};
+use crate::engine::{RandomNumberGenerator};
 
-pub fn  limestone_cavern_builder(new_depth: i32, _rng: &mut rltk::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
+pub fn  limestone_cavern_builder(new_depth: i32, _rng: &mut crate::engine::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
     let mut chain = BuilderChain::new(new_depth, width, height, "Limestone Cavern");
     chain.start_with(DrunkardsWalkBuilder::winding_passages());
     chain.with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER));
@@ -17,7 +17,7 @@ pub fn  limestone_cavern_builder(new_depth: i32, _rng: &mut rltk::RandomNumberGe
 pub struct CaveDecorator {}
 
 impl MetaMapBuilder for CaveDecorator {
-   fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+   fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
        self.build(rng, build_data);
    }
 }

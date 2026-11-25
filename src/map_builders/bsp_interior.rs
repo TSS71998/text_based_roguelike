@@ -1,5 +1,5 @@
 use super::{InitialMapBuilder, BuilderMap, Rect, TileType, draw_corridor};
-use rltk::RandomNumberGenerator;
+use crate::engine::RandomNumberGenerator;
 
 const MIN_ROOM_SIZE: i32 = 8;
 
@@ -8,7 +8,7 @@ pub struct BspInteriorBuilder {
 }
 
 impl InitialMapBuilder for BspInteriorBuilder {
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }
@@ -22,7 +22,7 @@ impl BspInteriorBuilder {
     }
 
 
-    fn build(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         let mut rooms: Vec<Rect> = Vec::new();
         self.rects.clear();
         self.rects.push(Rect::new(1, 1, build_data.map.width-2, build_data.map.height-2));

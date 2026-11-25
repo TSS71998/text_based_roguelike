@@ -1,8 +1,8 @@
 use specs::prelude::*;
-use super::{Rltk, ParticleLifetime, Position, Renderable};
-use rltk::{RGB};
+use super::{Ctx, ParticleLifetime, Position, Renderable};
+use crate::engine::{RGB};
 
-pub fn cull_dead_particles(ecs: &mut World, ctx: &Rltk) {
+pub fn cull_dead_particles(ecs: &mut World, ctx: &Ctx) {
     let mut dead_particles: Vec<Entity> = Vec::new();
     {
         let mut particles = ecs.write_storage::<ParticleLifetime>();
@@ -25,7 +25,7 @@ struct ParticleRequest {
     y: i32,
     fg: RGB,
     bg: RGB,
-    glyph: rltk::FontCharType,
+    glyph: crate::engine::FontCharType,
     lifetime: f32
 }
 
@@ -39,7 +39,7 @@ impl ParticleBuilder {
         ParticleBuilder { requests: Vec::new() }
     }
 
-    pub fn requests(&mut self, x: i32, y: i32, fg: RGB, bg: RGB, glyph: rltk::FontCharType, lifetime: f32) {
+    pub fn requests(&mut self, x: i32, y: i32, fg: RGB, bg: RGB, glyph: crate::engine::FontCharType, lifetime: f32) {
         self.requests.push(
             ParticleRequest { x, y, fg, bg, glyph, lifetime }
         );

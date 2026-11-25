@@ -1,4 +1,4 @@
-use rltk::RandomNumberGenerator;
+use crate::engine::RandomNumberGenerator;
 
 pub struct RandomEntry {
     name: String,

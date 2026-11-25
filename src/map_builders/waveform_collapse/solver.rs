@@ -191,7 +191,7 @@ impl Solver {
             }
 
             if possible_options.is_empty() {
-                rltk::console::log("Not possible");
+                crate::engine::log("Not possible");
                 self.possible = false;
                 return true;
             } else {

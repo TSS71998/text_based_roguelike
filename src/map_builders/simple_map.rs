@@ -4,7 +4,7 @@ pub struct SimpleMapBuilder {}
 
 impl InitialMapBuilder for SimpleMapBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.build_rooms(rng, build_data);
     }
 }
@@ -15,7 +15,7 @@ impl SimpleMapBuilder {
         Box::new(SimpleMapBuilder {})
     }
 
-    fn build_rooms(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_rooms(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         const MAX_ROOMS: i32 = 30;
         const MIN_SIZE: i32 = 6;
         const MAX_SIZE: i32 = 10;

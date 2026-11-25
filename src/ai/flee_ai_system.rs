@@ -21,8 +21,8 @@ impl<'a> System<'a> for FleeAI {
         for (entity, pos, flee, viewshed, _myturn) in (&entities, &mut positions, &want_flee, &mut viewsheds, &turns).join() {
             turn_done.push(entity);
             let my_idx = map.xy_idx(pos.x, pos.y);
-            let flee_map = rltk::DijkstraMap::new(map.width as usize, map.height as usize, &flee.indices, &*map, 100.0);
-            let flee_target = rltk::DijkstraMap::find_highest_exit(&flee_map, my_idx, &*map);
+            let flee_map = crate::engine::DijkstraMap::new(map.width as usize, map.height as usize, &flee.indices, &*map, 100.0);
+            let flee_target = crate::engine::DijkstraMap::find_highest_exit(&flee_map, my_idx, &*map);
             if let Some(flee_target) = flee_target {
                 if !crate::spatial::is_blocked(flee_target as usize) {
                     crate::spatial::move_entity(entity, my_idx, flee_target);

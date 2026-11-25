@@ -55,7 +55,7 @@ impl<'a> System<'a> for ChaseAI {
                     continue;
                 }
 
-                let path = rltk::a_star_search(
+                let path = crate::engine::a_star_search(
                     map.xy_idx(pos.x, pos.y),
                     map.xy_idx(target_pos.0, target_pos.1),
                     &mut *map

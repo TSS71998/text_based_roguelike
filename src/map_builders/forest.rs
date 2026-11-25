@@ -1,10 +1,10 @@
-use rltk::RandomNumberGenerator;
+use crate::engine::RandomNumberGenerator;
 
 use super::{BuilderChain, CellularAutomataBuilder, XStart, YStart, AreaStartingPosition,
     CullUnreachable, VoronoiSpawning, MetaMapBuilder};
 use crate::{TileType, map};
 
-pub fn forest_builder(new_depth: i32, _rng: &mut rltk::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
+pub fn forest_builder(new_depth: i32, _rng: &mut crate::engine::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
     let mut chain = BuilderChain::new(new_depth, width, height, "Into the Woods");
     chain.start_with(CellularAutomataBuilder::new());
     chain.with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER));
@@ -18,7 +18,7 @@ pub fn forest_builder(new_depth: i32, _rng: &mut rltk::RandomNumberGenerator, wi
 pub struct YellowBrickRoad {}
 
 impl MetaMapBuilder for YellowBrickRoad {
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut super::BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut super::BuilderMap) {
         self.build(rng, build_data)
     }
 }
@@ -36,9 +36,9 @@ impl YellowBrickRoad {
                 available_floors.push(
                     (
                         idx,
-                        rltk::DistanceAlg::PythagorasSquared.distance2d(
-                        rltk::Point::new(idx as i32 % build_data.map.width, idx as i32 / build_data.map.width),
-                        rltk::Point::new(seed_x, seed_y)
+                        crate::engine::DistanceAlg::PythagorasSquared.distance2d(
+                        crate::engine::Point::new(idx as i32 % build_data.map.width, idx as i32 / build_data.map.width),
+                        crate::engine::Point::new(seed_x, seed_y)
                         )
                     )
                 );
@@ -73,7 +73,7 @@ impl YellowBrickRoad {
         let end_idx = build_data.map.xy_idx(end_x, end_y);
 
         build_data.map.populate_blocked();
-        let path = rltk::a_star_search(start_idx, end_idx, &mut build_data.map);
+        let path = crate::engine::a_star_search(start_idx, end_idx, &mut build_data.map);
 
         for idx in path.steps.iter() {
             let x = *idx as i32 % build_data.map.width;
@@ -99,7 +99,7 @@ impl YellowBrickRoad {
 
         let (stream_x, stream_y) = self.find_exit(build_data, stream_startx, stream_starty);
         let stream_idx = build_data.map.xy_idx(stream_x, stream_y);
-        let stream = rltk::a_star_search(stair_idx, stream_idx , &mut build_data.map);
+        let stream = crate::engine::a_star_search(stair_idx, stream_idx , &mut build_data.map);
         for tile in stream.steps.iter() {
             if build_data.map.tiles[*tile as usize] == TileType::Floor {
                 build_data.map.tiles[*tile as usize] = TileType::ShallowWater;

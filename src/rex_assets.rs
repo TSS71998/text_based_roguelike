@@ -1,8 +1,15 @@
-use rltk::{rex::XpFile};
+use crate::engine::rex::XpFile;
 
-rltk::embedded_resource!(SMALL_DUNGEON, "../resources/SmallDungeon_80x50.xp");
-rltk::embedded_resource!(WFC_DEMO_IMAGE1, "../resources/wfc-demo1.xp");
-rltk::embedded_resource!(WFC_POPULATED, "../resources/wfc-populated.xp");
+const EMBEDDED: [(&str, &[u8]); 3] = [
+    ("../resources/SmallDungeon_80x50.xp", include_bytes!("../resources/SmallDungeon_80x50.xp")),
+    ("../resources/wfc-demo1.xp", include_bytes!("../resources/wfc-demo1.xp")),
+    ("../resources/wfc-populated.xp", include_bytes!("../resources/wfc-populated.xp")),
+];
+
+pub fn load_xp(path: &str) -> Result<XpFile, String> {
+    let (_, bytes) = EMBEDDED.iter().find(|(p, _)| *p == path).ok_or_else(|| format!("no embedded .xp file {path}"))?;
+    XpFile::from_bytes(bytes)
+}
 
 pub struct RexAssets {
     pub menu: XpFile
@@ -11,12 +18,8 @@ pub struct RexAssets {
 impl RexAssets {
     #[allow(clippy::new_without_default)]
     pub fn new() -> RexAssets {
-        rltk::link_resource!(SMALL_DUNGEON, "../resources/SmallDungeon_80x50.xp");
-        rltk::link_resource!(WFC_DEMO_IMAGE1, "../resources/wfc-demo1.xp");
-        rltk::link_resource!(WFC_POPULATED, "../resources/wfc-populated.xp");
-
         RexAssets { 
-            menu: XpFile::from_resource("../resources/SmallDungeon_80x50.xp").unwrap()
+            menu: load_xp("../resources/SmallDungeon_80x50.xp").unwrap()
         }
     }
 }

@@ -1,7 +1,5 @@
-use rltk::{Algorithm2D, BaseMap, Point};
+use crate::engine::{Algorithm2D, BaseMap, Point};
 use serde::{Serialize, Deserialize};
-use std::collections::HashSet;
-use bitvec::prelude::*;
 
 mod tiletype;
 pub use tiletype::*;
@@ -22,7 +20,7 @@ pub struct Map {
     pub view_blocked: Vec<bool>,
     pub name: String,
     pub outdoors: bool,
-    pub light: Vec<rltk::RGB>
+    pub light: Vec<crate::engine::RGB>
 }
 
 impl Map{
@@ -52,13 +50,13 @@ impl Map{
             view_blocked: vec![false; map_tile_count],
             name: name.to_string(),
             outdoors: true, 
-            light: vec![rltk::RGB::from_f32(0.0, 0.0, 0.0); map_tile_count]
+            light: vec![crate::engine::RGB::from_f32(0.0, 0.0, 0.0); map_tile_count]
         }
     }
 }
 
 impl Algorithm2D for Map {
-    fn dimensions(&self) -> rltk::Point {
+    fn dimensions(&self) -> crate::engine::Point {
         Point::new(self.width, self.height)
     }
 }
@@ -74,14 +72,14 @@ impl BaseMap for Map {
 
     fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
         let w = self.width as usize;
-        let p1 = Point::new(idx1 % w, idx1 / w);
-        let p2 = Point::new(idx2 % w, idx2 / w);
-        rltk::DistanceAlg::Manhattan.distance2d(p1, p2)
+        let p1 = Point::new((idx1 % w) as i32, (idx1 / w) as i32);
+        let p2 = Point::new((idx2 % w) as i32, (idx2 / w) as i32);
+        crate::engine::DistanceAlg::Manhattan.distance2d(p1, p2)
     }
 
-    fn get_available_exits(&self, idx:usize) -> rltk::SmallVec<[(usize, f32); 10]> {
+    fn get_available_exits(&self, idx:usize) -> crate::engine::Exits {
         const DIAGONAL_COST : f32 = 1.5;
-        let mut exits = rltk::SmallVec::new();
+        let mut exits = crate::engine::Exits::new();
         let x = idx as i32 % self.width;
         let y = idx as i32 / self.width;
         let tt = self.tiles[idx as usize];
@@ -108,61 +106,3 @@ impl BaseMap for Map {
         exits
     }
 }
-
-#[derive(Default, Serialize, Deserialize, Clone)]
-pub struct MapEncoded {
-    pub tiles: TileEncoder,
-    pub width: i32,
-    pub height: i32,
-    pub revealed_tiles: BitVec,
-    pub visible_tiles: BitVec,
-    pub blocked: BitVec,
-    pub depth: i32,
-    pub bloodstains: HashSet<usize>,
-    pub view_blocked: HashSet<usize>,
-    pub name: String
-}
-/* 
-impl MapEncoded {
-    pub fn encoding(map: &Map) -> MapEncoded {
-
-        let tiles = TileEncoder::encode(&map.tiles);
-        let revealed_encode = map.revealed_tiles.iter().copied().collect::<BitVec>();
-        let visible_encode = map.visible_tiles.iter().copied().collect::<BitVec>();
-        let blocked_encode = map.blocked.iter().copied().collect::<BitVec>();
-
-        MapEncoded {
-            tiles: tiles,
-            width: map.width,
-            height: map.height,
-            revealed_tiles: revealed_encode,
-            visible_tiles: visible_encode,
-            blocked: blocked_encode,
-            depth: map.depth,
-            bloodstains: HashSet::new(),
-            view_blocked: HashSet::new(),
-            name: map.name.clone()
-        }
-    }
-
-    pub fn decoding(self) -> Map {
-        let map_tile_count = (self.width*self.height) as usize;
-        let tiles = TileEncoder::decode(self.tiles);
-        let revealed_tiles = self.revealed_tiles.iter().by_vals().collect::<Vec<bool>>();
-        let visible_tiles = self.visible_tiles.iter().by_vals().collect::<Vec<bool>>();
-        let blocked = self.blocked.iter().by_vals().collect::<Vec<bool>>();
-        Map {
-            tiles: tiles,
-            width: self.width,
-            height: self.height,
-            revealed_tiles: revealed_tiles,
-            visible_tiles: visible_tiles,
-            blocked: blocked,
-            tile_content: vec![Vec::new(); map_tile_count],
-            depth: self.depth,
-            bloodstains: self.bloodstains,
-            view_blocked: self.view_blocked,
-            name: self.name.to_string()
-        }
-    }
-}*/

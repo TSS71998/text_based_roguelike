@@ -20,7 +20,7 @@ use std::io;
 use std::path::Path;
 
 use bincode::Options;
-use rltk::Point;
+use crate::engine::Point;
 use specs::prelude::*;
 use specs::saveload::{DeserializeComponents, SerializeComponents, SimpleMarker, SimpleMarkerAllocator};
 
@@ -153,7 +153,7 @@ fn drop_dangling_references(ecs: &World) {
                 .map(|(e, _)| e)
                 .collect();
             for e in stale {
-                rltk::console::log(format!("save: dropping {} on {:?} (refers to a deleted entity)", stringify!($ty), e));
+                crate::engine::log(format!("save: dropping {} on {:?} (refers to a deleted entity)", stringify!($ty), e));
                 storage.remove(e);
             }
         }};
@@ -338,7 +338,7 @@ mod tests {
         ecs.insert(MasterDungeonMap::new());
         ecs.insert(Map::new(1, 64, 64, "New Map"));
         ecs.insert(Point::new(0, 0));
-        ecs.insert(rltk::RandomNumberGenerator::seeded(42));
+        ecs.insert(crate::engine::RandomNumberGenerator::seeded(42));
         let player = spawner::player(&mut ecs, 0, 0);
         ecs.insert(player);
         ecs.insert(gamelog::GameLog { entries: vec![] });

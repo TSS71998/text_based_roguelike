@@ -1,10 +1,7 @@
-use rltk::{GameState, Point, Rltk};
+use crate::engine::{GameState, Point, Ctx};
 use specs::{prelude::*};
 use specs::saveload::SimpleMarkerAllocator;
 use std::sync::atomic::{AtomicU64, Ordering};
-
-#[macro_use]
-extern crate lazy_static;
 
 pub mod engine;
 mod map;
@@ -38,7 +35,8 @@ pub mod hunger_system;
 pub mod rex_assets;
 pub mod trigger_system;
 pub mod map_builders;
-pub mod camera;
+pub mod render;
+mod actions;
 pub mod raws;
 pub mod ai;
 pub mod lighting_system;
@@ -124,14 +122,14 @@ impl State {
 }
 
 impl GameState for State {
-    fn tick(&mut self, ctx: &mut Rltk) {
+    fn tick(&mut self, ctx: &mut Ctx) {
         let mut newrunstate;
         {
             let runstate = self.ecs.fetch::<RunState>();
             newrunstate = *runstate;
         }
 
-        camera::clear_layers(ctx);
+        render::clear_layers(ctx);
         particle_system::cull_dead_particles(&mut self.ecs, ctx);
         let started_state = newrunstate;
 
@@ -146,8 +144,8 @@ impl GameState for State {
                 if !SHOW_MAPGEN_VISUALIZER {
                     newrunstate = self.mapgen_next_state.unwrap();
                 }
-                camera::clear_layers(ctx);
-                if self.mapgen_index < self.mapgen_history.len() {camera::render_debug_map(&self.mapgen_history[self.mapgen_index], ctx);}
+                render::clear_layers(ctx);
+                 if self.mapgen_index < self.mapgen_history.len() {render::top_down::render_debug_map(&self.mapgen_history[self.mapgen_index], ctx);}
 
                 self.mapgen_timer += ctx.frame_time_ms;
                 if self.mapgen_timer > 300.0 {
@@ -239,7 +237,7 @@ impl GameState for State {
                                         saveload_system::delete_save();
                                     }
                                     Err(e) => {
-                                        rltk::console::log(format!("Could not load save: {e}"));
+                                        crate::engine::log(format!("Could not load save: {e}"));
                                         newrunstate = RunState::MainMenu { menu_selection:gui::MainMenuSelection::LoadGame };
                                     }
                                 }
@@ -334,7 +332,7 @@ impl GameState for State {
         let shows_world = |s: &RunState| !matches!(s, RunState::MainMenu { .. } | RunState::GameOver { .. } | RunState::MapGeneration);
         if shows_world(&started_state) && shows_world(&newrunstate) {
             lighting_system::animate(&self.ecs, ctx.frame_time_ms);
-            camera::render_camera(&self.ecs, ctx);
+            render::render_world(&self.ecs, ctx);
         }
         
 
@@ -391,21 +389,18 @@ impl State {
     }
 }
 
-fn main() -> rltk::BError {
+fn main() -> crate::engine::BError {
     #[cfg(not(target_arch = "wasm32"))]
     unsafe {
         std::env::set_var("WINIT_UNIX_BACKEND", "x11");
     }
 
-    use rltk::RltkBuilder;
-    let mut context = RltkBuilder::simple(80, 60)
-        .unwrap()
+    let context = engine::CtxBuilder::new(80, 60)
         .with_tile_dimensions(16, 16)
         .with_title("TextBasedRoguelike")
-        .with_fancy_console(80, 60, "terminal8x8.png")
-        .with_sparse_console(80, 60, "terminal8x8.png")
-        .build()?;
-    context.with_post_scanlines(true);
+        .with_font(include_bytes!("../resources/terminal8x8.png"), 8, 8)
+        .with_scanlines(true);
+    let context = render::LAYERS.iter().fold(context, |b, &kind| b.with_layer(kind)).build()?;
 
     let mut gs = State{ 
         ecs: World::new(),
@@ -427,7 +422,7 @@ fn main() -> rltk::BError {
     gs.ecs.insert(map::MasterDungeonMap::new());
     gs.ecs.insert(Map::new(1, 64, 64, "New Map"));
     gs.ecs.insert(Point::new(0,0));
-    gs.ecs.insert(rltk::RandomNumberGenerator::new());
+    gs.ecs.insert(crate::engine::RandomNumberGenerator::new());
     let player_entity = spawner::player(&mut gs.ecs, 0, 0);
     gs.ecs.insert(player_entity);
     gs.ecs.insert(RunState::MapGeneration{});
@@ -436,9 +431,10 @@ fn main() -> rltk::BError {
     gs.ecs.insert(lighting_system::LightingState::default());
     gs.ecs.insert(presentation::Events::default());
     gs.ecs.insert(presentation::Presentation::default());
+    gs.ecs.insert(render::ViewMode::default());
     gs.ecs.insert(rex_assets::RexAssets::new());
 
     gs.generate_world_map(1, 0);
 
-    rltk::main_loop(context,gs)
+    engine::main_loop(context,gs)
 }

@@ -1,7 +1,6 @@
 use serde::{Serialize, Deserialize};
-use specs::rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-#[derive(PartialEq, Copy, Clone, Serialize, Deserialize, Eq, Hash)]
+#[derive(PartialEq, Copy, Clone, Debug, Serialize, Deserialize, Eq, Hash)]
 pub enum TileType {
     Wall, 
     Stalactite, 
@@ -18,70 +17,58 @@ pub enum TileType {
     UpStairs
 }
 
+#[derive(PartialEq, Copy, Clone, Debug, Eq)]
+pub enum TileShape {
+    Solid,
+    Column,
+    Floor,
+    Liquid,
+    StairsDown,
+    StairsUp,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct TileDef {
+    pub walkable: bool,
+    pub opaque: bool,
+    pub cost: f32,
+    pub shape: TileShape,
+}
+
+const fn def(walkable: bool, opaque: bool, cost: f32, shape: TileShape) -> TileDef {
+    TileDef { walkable, opaque, cost, shape }
+}
+
+pub const fn tile_def(tt: TileType) -> TileDef {
+    use TileShape::*;
+    match tt {
+        TileType::Wall => def(false, true, 1.0, Solid),
+        TileType::Stalactite => def(false, true, 1.0, Column),
+        TileType::Stalagmite => def(false, true, 1.0, Column),
+        TileType::Floor => def(true, false, 1.0, Floor),
+        TileType::DownStairs => def(true, false, 1.0, StairsDown),
+        TileType::Road => def(true, false, 0.8, Floor),
+        TileType::Grass => def(true, false, 1.1, Floor),
+        TileType::ShallowWater => def(true, false, 1.2, Liquid),
+        TileType::DeepWater => def(false, false, 1.0, Liquid),
+        TileType::WoodFloor => def(true, false, 1.0, Floor),
+        TileType::Bridge => def(true, false, 1.0, Floor),
+        TileType::Gravel => def(true, false, 1.0, Floor),
+        TileType::UpStairs => def(true, false, 1.0, StairsUp),
+    }
+}
+
+#[inline]
 pub fn tile_walkable(tt: TileType) -> bool {
-    match tt {
-        TileType::Floor | TileType::DownStairs | TileType::Road | TileType::Grass |
-        TileType::ShallowWater | TileType::WoodFloor | TileType::Bridge | TileType::Gravel | 
-        TileType::UpStairs
-            => true,
-          _ => false
-    }
+    tile_def(tt).walkable
 }
 
+#[inline]
 pub fn tile_opaque(tt: TileType) -> bool {
-    match tt {
-        TileType::Wall | TileType::Stalactite | TileType::Stalagmite => true,
-        _ => false
-    }
+    tile_def(tt).opaque
 }
 
+#[inline]
 pub fn tile_cost(tt: TileType) -> f32 {
-    match tt {
-        TileType::Road => 0.8,
-        TileType::Grass => 1.1,
-        TileType::ShallowWater => 1.2,
-        _ => 1.0
-    }
-}
-
-#[derive(Default, Serialize, Clone, Deserialize)]
-pub struct TileEncoder(pub Vec<u8>);
-
-impl TileEncoder {
-    pub fn encode(tiles: &Vec<TileType>) -> Self {
-        TileEncoder(tiles.par_iter().copied().map(|tile| match tile {
-            TileType::Wall => 0,
-            TileType::Floor => 1,
-            TileType::DownStairs => 2,
-            TileType::Road => 3,
-            TileType::Grass => 4,
-            TileType::ShallowWater => 5,
-            TileType::DeepWater => 6,
-            TileType::WoodFloor => 7,
-            TileType::Bridge => 8,
-            TileType::Gravel => 9,
-            TileType::UpStairs => 10,
-            TileType::Stalactite => 11,
-            TileType::Stalagmite => 12
-        }).collect())
-    }
-
-    pub fn decode(self) -> Vec<TileType> {
-        self.0.into_iter().map(|tile| match tile {
-            0 => TileType::Wall,
-            1 => TileType::Floor,
-            2 => TileType::DownStairs,
-            3 => TileType::Road,
-            4 => TileType::Grass,
-            5 => TileType::ShallowWater,
-            6 => TileType::DeepWater,
-            7 => TileType::WoodFloor,
-            8 => TileType::Bridge,
-            9 => TileType::Gravel,
-            10 => TileType::UpStairs,
-            11 => TileType::Stalactite,
-            12 => TileType::Stalagmite,
-            _ => unimplemented!()
-        }).collect()
-    }
+    tile_def(tt).cost
 }

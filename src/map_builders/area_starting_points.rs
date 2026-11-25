@@ -13,7 +13,7 @@ pub struct AreaStartingPosition {
 }
 
 impl MetaMapBuilder for AreaStartingPosition {
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }
@@ -26,7 +26,7 @@ impl AreaStartingPosition {
         })
     }
 
-    fn build(&mut self, _rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(&mut self, _rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         let seed_x;
         let seed_y;
         
@@ -48,9 +48,9 @@ impl AreaStartingPosition {
                 available_floors.push(
                     (
                         idx,
-                        rltk::DistanceAlg::PythagorasSquared.distance2d(
-                            rltk::Point::new(idx as i32 % build_data.map.width, idx as i32 / build_data.map.width),
-                            rltk::Point::new(seed_x, seed_y)
+                        crate::engine::DistanceAlg::PythagorasSquared.distance2d(
+                            crate::engine::Point::new(idx as i32 % build_data.map.width, idx as i32 / build_data.map.width),
+                            crate::engine::Point::new(seed_x, seed_y)
                         )
                     )
                 );

@@ -1,6 +1,6 @@
 use super::{Map, Rect, TileType, Position, spawner, SHOW_MAPGEN_VISUALIZER};
 mod simple_map;
-use rltk::RandomNumberGenerator;
+use crate::engine::RandomNumberGenerator;
 use simple_map::SimpleMapBuilder;
 mod bsp_dungeon;
 use bsp_dungeon::BspDungeonBuilder;
@@ -122,7 +122,7 @@ impl BuilderChain {
         self.builders.push(metabuilder);
     }
 
-    pub fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator) {
+    pub fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator) {
         match &mut self.starter {
             None => panic!("Cannot run a map builder chain without a starting build system."),
             Some(starter) => {
@@ -143,15 +143,15 @@ impl BuilderChain {
 }
 
 pub trait InitialMapBuilder {
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap);
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap);
 }
 
 pub trait MetaMapBuilder {
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap);
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap);
 }
 
-pub fn level_builder(new_depth: i32, rng: &mut rltk::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
-    rltk::console::log(format!("Depth: {}", new_depth));
+pub fn level_builder(new_depth: i32, rng: &mut crate::engine::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
+    crate::engine::log(format!("Depth: {}", new_depth));
     match new_depth {
         1 => town_builder(new_depth, rng, width, height),
         2 => forest_builder(new_depth, rng, width, height),
@@ -160,7 +160,7 @@ pub fn level_builder(new_depth: i32, rng: &mut rltk::RandomNumberGenerator, widt
     }
 }
 
-pub fn random_builder(new_depth: i32, rng: &mut rltk::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
+pub fn random_builder(new_depth: i32, rng: &mut crate::engine::RandomNumberGenerator, width: i32, height: i32) -> BuilderChain {
     let mut builder = BuilderChain::new(new_depth, width, height, "New Map");
     let type_roll = rng.roll_dice(1, 2);
     match type_roll {
@@ -188,7 +188,7 @@ pub fn random_builder(new_depth: i32, rng: &mut rltk::RandomNumberGenerator, wid
     builder 
 }
 
-fn random_shape_builder(rng: &mut rltk::RandomNumberGenerator, builder: &mut BuilderChain) {
+fn random_shape_builder(rng: &mut crate::engine::RandomNumberGenerator, builder: &mut BuilderChain) {
     let builder_roll = rng.roll_dice(1, 16);
     match builder_roll {
         1 => builder.start_with(CellularAutomataBuilder::new()),

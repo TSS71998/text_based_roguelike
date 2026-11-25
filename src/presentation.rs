@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use rltk::{FontCharType, VirtualKeyCode, RGB};
+use crate::engine::{FontCharType, Key, RGB};
 use specs::prelude::*;
 use crate::{Map, ParticleLifetime, Pools, Position, Renderable};
 
@@ -129,7 +129,7 @@ pub struct Presentation {
     map_signature: (i32, i32, i32),
     stamp: u64,
     player: Option<Entity>,
-    buffered_key: Option<VirtualKeyCode>
+    buffered_key: Option<Key>
 }
 
 impl Presentation {
@@ -167,7 +167,7 @@ impl Presentation {
         }
     }
 
-    pub fn filter_key(&mut self, key: Option<VirtualKeyCode>, ready: bool) -> Option<VirtualKeyCode> {
+    pub fn filter_key(&mut self, key: Option<Key>, ready: bool) -> Option<Key> {
         if !ready {
             if key.is_some() {self.buffered_key = key;}
             return None;

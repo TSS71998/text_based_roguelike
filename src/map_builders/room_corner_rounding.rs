@@ -3,7 +3,7 @@ pub struct RoomCornerRounder {}
 
 impl MetaMapBuilder for RoomCornerRounder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }
@@ -14,7 +14,7 @@ impl RoomCornerRounder {
         Box::new(RoomCornerRounder{})
     }
 
-    fn build(&mut self, _rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(&mut self, _rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         let rooms: Vec<Rect>;
         if let Some(rooms_builder) = &build_data.rooms {
             rooms = rooms_builder.clone();

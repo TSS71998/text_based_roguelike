@@ -2,7 +2,7 @@ use specs::prelude::*;
 use crate::BlocksVisibility;
 
 use super::{Viewshed, Position, Map, Player, Hidden, gamelog::GameLog, Name};
-use rltk::{field_of_view, Point};
+use crate::engine::{field_of_view, Point};
 
 pub struct VisibilitySystem {}
 
@@ -13,7 +13,7 @@ impl<'a> System<'a> for VisibilitySystem {
                         WriteStorage<'a, Position>,
                         ReadStorage<'a, Player>,
                         WriteStorage<'a, Hidden>,
-                        WriteExpect<'a, rltk::RandomNumberGenerator>,
+                        WriteExpect<'a, crate::engine::RandomNumberGenerator>,
                         WriteExpect<'a, GameLog>,
                         ReadStorage<'a, Name>,
                         ReadStorage<'a, BlocksVisibility>

@@ -3,7 +3,7 @@ pub struct DoglegCorridors {}
 
 impl MetaMapBuilder for DoglegCorridors {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.corridors(rng, build_data);
     }
 }
@@ -14,7 +14,7 @@ impl DoglegCorridors {
         Box::new(DoglegCorridors{})
     }
 
-    fn corridors(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn corridors(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         let rooms: Vec<Rect>;
         if let Some(rooms_builder) = &build_data.rooms {
             rooms = rooms_builder.clone();

@@ -1,11 +1,11 @@
 use super::{Map,  InitialMapBuilder, BuilderMap, TileType};
-use rltk::RandomNumberGenerator;
+use crate::engine::RandomNumberGenerator;
 
 pub struct MazeBuilder {}
 
 impl InitialMapBuilder for MazeBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data : &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data : &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }

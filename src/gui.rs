@@ -1,7 +1,7 @@
-use rltk::{Point, RGB, Rltk, VirtualKeyCode};
+use crate::engine::{Point, RGB, Ctx, Key};
 use specs::prelude::*;
 use super::{Pools, gamelog::GameLog, Map, Name, State, InBackpack, Viewshed, 
-    Equipped, RunState, HungerClock, HungerState, rex_assets::RexAssets, Hidden, camera,
+    Equipped, RunState, HungerClock, HungerState, rex_assets::RexAssets, Hidden, render::{self, top_down, ViewMode},
     Attribute, Attributes, Consumable};
 
 #[derive(PartialEq, Clone, Copy)]
@@ -15,11 +15,11 @@ pub enum MainMenuResult {NoSelection{selected: MainMenuSelection}, Selected{sele
 
 pub enum GameOverResult {NoSelection, QuitToMenu}
 
-pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
-    use rltk::to_cp437;
+pub fn draw_ui(ecs: &World, ctx: &mut Ctx) {
+    use crate::engine::to_cp437;
     let box_gray: RGB = RGB::from_hex("#999999").expect("Opps");
-    let black = RGB::named(rltk::BLACK);
-    let white = RGB::named(rltk::WHITE);
+    let black = RGB::named(crate::engine::BLACK);
+    let white = RGB::named(crate::engine::WHITE);
 
     draw_hollow_box(ctx, 0, 0, 79, 59, box_gray, black);
     draw_hollow_box(ctx, 0, 0, 49, 45, box_gray, black);
@@ -51,9 +51,9 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
     ctx.print_color(50, 1, white, black, &health);
     ctx.print_color(50, 2, white, black, &mana);
     ctx.print_color(50, 3, white, black, &xp);
-    ctx.draw_bar_horizontal(64, 1, 14, player_pools.hit_points.current, player_pools.hit_points.max, RGB::named(rltk::RED), RGB::named(rltk::BLACK));
-    ctx.draw_bar_horizontal(64, 2, 14, player_pools.mana.current, player_pools.mana.max, RGB::named(rltk::BLUE), RGB::named(rltk::BLACK));
-    ctx.draw_bar_horizontal(64, 3, 14, player_pools.xp - xp_level_start, 1000, RGB::named(rltk::GOLD), RGB::named(rltk::BLACK));
+    ctx.draw_bar_horizontal(64, 1, 14, player_pools.hit_points.current, player_pools.hit_points.max, RGB::named(crate::engine::RED), RGB::named(crate::engine::BLACK));
+    ctx.draw_bar_horizontal(64, 2, 14, player_pools.mana.current, player_pools.mana.max, RGB::named(crate::engine::BLUE), RGB::named(crate::engine::BLACK));
+    ctx.draw_bar_horizontal(64, 3, 14, player_pools.xp - xp_level_start, 1000, RGB::named(crate::engine::GOLD), RGB::named(crate::engine::BLACK));
 
     let attributes = ecs.read_storage::<Attributes>();
     let attr = attributes.get(*player_entity).unwrap();
@@ -74,7 +74,7 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
 
     y += 1;
     let green = RGB::from_f32(0.0, 1.0, 0.0);
-    let yellow = RGB::named(rltk::YELLOW);
+    let yellow = RGB::named(crate::engine::YELLOW);
     let consumables = ecs.read_storage::<Consumable>();
     let backpack = ecs.read_storage::<InBackpack>();
     let mut index =1;
@@ -90,10 +90,10 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
     let hunger = ecs.read_storage::<HungerClock>();
     let hc = hunger.get(*player_entity).unwrap();
     match hc.state {
-        HungerState::WellFed => ctx.print_color(50, 44, RGB::named(rltk::GREEN), RGB::named(rltk::BLACK), "Well Fed"),
+        HungerState::WellFed => ctx.print_color(50, 44, RGB::named(crate::engine::GREEN), RGB::named(crate::engine::BLACK), "Well Fed"),
         HungerState::Normal => {}
-        HungerState::Hungry => ctx.print_color(50, 44, RGB::named(rltk::ORANGE), RGB::named(rltk::BLACK), "Hungry"),
-        HungerState::Starving => ctx.print_color(50, 44, RGB::named(rltk::RED), RGB::named(rltk::BLACK), "Starving"),
+        HungerState::Hungry => ctx.print_color(50, 44, RGB::named(crate::engine::ORANGE), RGB::named(crate::engine::BLACK), "Hungry"),
+        HungerState::Starving => ctx.print_color(50, 44, RGB::named(crate::engine::RED), RGB::named(crate::engine::BLACK), "Starving"),
     }
 
     let log = ecs.fetch::<GameLog>();
@@ -103,11 +103,13 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
         y += 1;
     }
 
-    draw_tooltips(ecs, ctx);
+    if render::effective_view(ecs) == ViewMode::TopDown {
+        draw_tooltips(ecs, ctx);    
+    }
 }
 
-pub fn draw_hollow_box(console: &mut Rltk, sx: i32, sy: i32, width: i32, height: i32, fg: RGB, bg: RGB) {
-    use rltk::to_cp437;
+pub fn draw_hollow_box(console: &mut Ctx, sx: i32, sy: i32, width: i32, height: i32, fg: RGB, bg: RGB) {
+    use crate::engine::to_cp437;
 
     console.set(sx, sy, fg, bg, to_cp437('┌'));
     console.set(sx + width, sy, fg, bg, to_cp437('┐'));
@@ -123,18 +125,18 @@ pub fn draw_hollow_box(console: &mut Rltk, sx: i32, sy: i32, width: i32, height:
     }
 }
 
-fn draw_attribute(name: &str, attribute: &Attribute, y: i32, ctx: &mut Rltk) {
+fn draw_attribute(name: &str, attribute: &Attribute, y: i32, ctx: &mut Ctx) {
     let attr_gray: RGB = RGB::from_hex("#CCCCCC").expect("Opps");
-    let black = RGB::named(rltk::BLACK);
+    let black = RGB::named(crate::engine::BLACK);
     ctx.print_color(50, y, attr_gray, black, name);
     let color: RGB = 
         if attribute.modifiers < 0 { RGB::from_f32(1.0, 0.0, 0.0)}
-        else if attribute.modifiers == 1 {RGB::named(rltk::WHITE)}
+        else if attribute.modifiers == 1 {RGB::named(crate::engine::WHITE)}
         else {RGB::from_f32(0.0, 1.0, 0.0)};
     
     ctx.print_color(67, y, color, black, &format!("{}", attribute.base + attribute.modifiers));
     ctx.print_color(73, y, color, black, &format!("{}", attribute.bonus));
-    if attribute.bonus > 0 {ctx.set(72, y, color, black, rltk::to_cp437('+'));}
+    if attribute.bonus > 0 {ctx.set(72, y, color, black, crate::engine::to_cp437('+'));}
 }
 
 struct ToolTip {
@@ -162,11 +164,11 @@ impl ToolTip {
 
     fn height(&self) -> i32 {self.lines.len() as i32 + 2i32}
 
-    fn render(&self, ctx: &mut Rltk, x: i32, y: i32) {
+    fn render(&self, ctx: &mut Ctx, x: i32, y: i32) {
         let box_gray: RGB = RGB::from_hex("#999999").expect("Opps");
         let light_gray: RGB = RGB::from_hex("#DDDDDD").expect("Opps");
-        let black = RGB::named(rltk::BLACK);
-        let white = RGB::named(rltk::WHITE);
+        let black = RGB::named(crate::engine::BLACK);
+        let white = RGB::named(crate::engine::WHITE);
         ctx.draw_box(x, y, self.width() - 1, self.height() - 1, white, box_gray);
         for (i, s) in self.lines.iter().enumerate() {
             let col = if i == 0 {white} else {light_gray};
@@ -175,10 +177,9 @@ impl ToolTip {
     }
 }
 
-fn draw_tooltips(ecs: &World, ctx: &mut Rltk) {
-    use rltk::to_cp437;
+fn draw_tooltips(ecs: &World, ctx: &mut Ctx) {
+    use crate::engine::to_cp437;
     
-    let (min_x, _max_x, min_y, _max_y) = camera::get_screen_bounds(ecs, ctx);
     let map = ecs.fetch::<Map>();
     let names = ecs.read_storage::<Name>();
     let hidden = ecs.read_storage::<Hidden>();
@@ -186,11 +187,8 @@ fn draw_tooltips(ecs: &World, ctx: &mut Rltk) {
     let pools = ecs.read_storage::<Pools>();
 
     let mouse_pos = ctx.mouse_pos();
-    let mut mouse_map_pos = mouse_pos;
-    mouse_map_pos.0 += min_x;
-    mouse_map_pos.1 += min_y;
-    if mouse_map_pos.0 >= map.width - 1 || mouse_map_pos.1 >= map.height - 1 || mouse_map_pos.0 < 1 || mouse_map_pos.1 < 1 
-    {
+    let mouse_map_pos = top_down::screen_to_map(ecs, mouse_pos);
+    if mouse_map_pos.0 >= map.width - 1 || mouse_map_pos.1 >= map.height - 1 || mouse_map_pos.0 < 1 || mouse_map_pos.1 < 1 {
         return;
     }
 
@@ -237,7 +235,7 @@ fn draw_tooltips(ecs: &World, ctx: &mut Rltk) {
     if tip_boxes.is_empty() {return;}
 
     let box_gray: RGB = RGB::from_hex("#999999").expect("Opps");
-    let white = RGB::named(rltk::WHITE);
+    let white = RGB::named(crate::engine::WHITE);
 
     let arrow;
     let arrow_x;
@@ -272,7 +270,7 @@ fn draw_tooltips(ecs: &World, ctx: &mut Rltk) {
     }
 }
 
-pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option<Entity>) {
+pub fn show_inventory(gs: &mut State, ctx: &mut Ctx) -> (ItemMenuResult, Option<Entity>) {
     let player_entity = gs.ecs.fetch::<Entity>();
     let names = gs.ecs.read_storage::<Name>();
     let backpack = gs.ecs.read_storage::<InBackpack>();
@@ -282,16 +280,16 @@ pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
     let count = inventory.count();
 
     let mut y = (25 - (count)/2) as i32;
-    ctx.draw_box(15, y-2, 31, (count+3) as i32, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK));
-    ctx.print_color(18, y-2, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Inventory");
-    ctx.print_color(18, y+count as i32 +1, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Escape to cancel");
+    ctx.draw_box(15, y-2, 31, (count+3) as i32, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK));
+    ctx.print_color(18, y-2, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Inventory");
+    ctx.print_color(18, y+count as i32 +1, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Escape to cancel");
 
     let mut equippable: Vec<Entity> = Vec::new();
     let mut j = 0;
     for (entity, _pack, name) in (&entities, &backpack, &names).join().filter(|item| item.1.owner == *player_entity) {
-        ctx.set(17, y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), rltk::to_cp437('('));
-        ctx.set(18, y, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), 97+j as rltk::FontCharType);
-        ctx.set(19, y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), rltk::to_cp437(')'));
+        ctx.set(17, y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), crate::engine::to_cp437('('));
+        ctx.set(18, y, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), 97+j as crate::engine::FontCharType);
+        ctx.set(19, y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), crate::engine::to_cp437(')'));
 
         ctx.print(21, y, &name.name.to_string());
         equippable.push(entity);
@@ -303,9 +301,9 @@ pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
         None => (ItemMenuResult::NoResponse, None),
         Some(key) => {
             match key {
-                VirtualKeyCode::Escape => {(ItemMenuResult::Cancel, None)}
+                Key::Escape => {(ItemMenuResult::Cancel, None)}
                 _ => {
-                    let selection = rltk::letter_to_option(key);
+                    let selection = crate::engine::letter_to_option(key);
                     if selection > -1 && selection < count as i32 {
                         return (ItemMenuResult::Selected, Some(equippable[selection as usize]));
                     }
@@ -316,7 +314,7 @@ pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
     }
 }
 
-pub fn drop_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option<Entity>) {
+pub fn drop_item_menu(gs: &mut State, ctx: &mut Ctx) -> (ItemMenuResult, Option<Entity>) {
     let player_entity = gs.ecs.fetch::<Entity>();
     let names = gs.ecs.read_storage::<Name>();
     let backpack = gs.ecs.read_storage::<InBackpack>();
@@ -326,16 +324,16 @@ pub fn drop_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
     let count = inventory.count();
 
     let mut y = (25 - (count)/2) as i32;
-    ctx.draw_box(15, y-2, 31, (count+3) as i32, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK));
-    ctx.print_color(18, y-2, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Drop Which Item?");
-    ctx.print_color(18, y+count as i32 +1, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Escape to cancel");
+    ctx.draw_box(15, y-2, 31, (count+3) as i32, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK));
+    ctx.print_color(18, y-2, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Drop Which Item?");
+    ctx.print_color(18, y+count as i32 +1, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Escape to cancel");
 
     let mut equippable: Vec<Entity> = Vec::new();
     let mut j = 0;
     for (entity, _pack, name) in (&entities, &backpack, &names).join().filter(|item| item.1.owner == *player_entity) {
-        ctx.set(17, y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), rltk::to_cp437('('));
-        ctx.set(18, y, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), 97+j as rltk::FontCharType);
-        ctx.set(19, y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), rltk::to_cp437(')'));
+        ctx.set(17, y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), crate::engine::to_cp437('('));
+        ctx.set(18, y, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), 97+j as crate::engine::FontCharType);
+        ctx.set(19, y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), crate::engine::to_cp437(')'));
 
         ctx.print(21, y, &name.name.to_string());
         equippable.push(entity);
@@ -347,9 +345,9 @@ pub fn drop_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
         None => (ItemMenuResult::NoResponse, None),
         Some(key) => {
             match key {
-                VirtualKeyCode::Escape => {(ItemMenuResult::Cancel, None)}
+                Key::Escape => {(ItemMenuResult::Cancel, None)}
                 _ => {
-                    let selection = rltk::letter_to_option(key);
+                    let selection = crate::engine::letter_to_option(key);
                     if selection > -1 && selection < count as i32 {
                         return (ItemMenuResult::Selected, Some(equippable[selection as usize]));
                     }
@@ -360,7 +358,7 @@ pub fn drop_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
     }
 }
 
-pub fn remove_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option<Entity>) {
+pub fn remove_item_menu(gs: &mut State, ctx: &mut Ctx) -> (ItemMenuResult, Option<Entity>) {
     let player_entity = gs.ecs.fetch::<Entity>();
     let names = gs.ecs.read_storage::<Name>();
     let backpack = gs.ecs.read_storage::<Equipped>();
@@ -370,16 +368,16 @@ pub fn remove_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Opti
     let count = inventory.count();
 
     let mut y = (25 - (count)/2) as i32;
-    ctx.draw_box(15, y-2, 31, (count+3) as i32, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK));
-    ctx.print_color(18, y-2, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Remove Which Item?");
-    ctx.print_color(18, y+count as i32 +1, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Escape to cancel");
+    ctx.draw_box(15, y-2, 31, (count+3) as i32, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK));
+    ctx.print_color(18, y-2, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Remove Which Item?");
+    ctx.print_color(18, y+count as i32 +1, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Escape to cancel");
 
     let mut equippable: Vec<Entity> = Vec::new();
     let mut j = 0;
     for (entity, _pack, name) in (&entities, &backpack, &names).join().filter(|item| item.1.owner == *player_entity) {
-        ctx.set(17, y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), rltk::to_cp437('('));
-        ctx.set(18, y, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), 97+j as rltk::FontCharType);
-        ctx.set(19, y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), rltk::to_cp437(')'));
+        ctx.set(17, y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), crate::engine::to_cp437('('));
+        ctx.set(18, y, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), 97+j as crate::engine::FontCharType);
+        ctx.set(19, y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), crate::engine::to_cp437(')'));
 
         ctx.print(21, y, &name.name.to_string());
         equippable.push(entity);
@@ -391,9 +389,9 @@ pub fn remove_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Opti
         None => (ItemMenuResult::NoResponse, None),
         Some(key) => {
             match key {
-                VirtualKeyCode::Escape => {(ItemMenuResult::Cancel, None)}
+                Key::Escape => {(ItemMenuResult::Cancel, None)}
                 _ => {
-                    let selection = rltk::letter_to_option(key);
+                    let selection = crate::engine::letter_to_option(key);
                     if selection > -1 && selection < count as i32 {
                         return (ItemMenuResult::Selected, Some(equippable[selection as usize]));
                     }
@@ -404,24 +402,24 @@ pub fn remove_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Opti
     }
 }
 
-pub fn ranged_target(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuResult, Option<Point>) {
-    let (min_x, max_x, min_y, max_y) = camera::get_screen_bounds(&gs.ecs, ctx);
+pub fn ranged_target(gs: &mut State, ctx: &mut Ctx, range: i32) -> (ItemMenuResult, Option<Point>) {
+    let (min_x, max_x, min_y, max_y) = top_down::get_screen_bounds(&gs.ecs, ctx);
     let player_entity = gs.ecs.fetch::<Entity>();
     let player_pos = gs.ecs.fetch::<Point>();
     let viewsheds = gs.ecs.read_storage::<Viewshed>();
 
-    ctx.print_color(5, 0, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Select Target:");
+    ctx.print_color(5, 0, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Select Target:");
 
     let mut available_cells = Vec::new();
     let visible = viewsheds.get(*player_entity);
     if let Some(visible) = visible {
         for idx in visible.visible_tiles.iter() {
-            let distance = rltk::DistanceAlg::Pythagoras.distance2d(*player_pos, *idx);
+            let distance = crate::engine::DistanceAlg::Pythagoras.distance2d(*player_pos, *idx);
             if distance <= range as f32 {
                 let screen_x = idx.x - min_x;
                 let screen_y = idx.y - min_y;
                 if screen_x > 1 && screen_x < (max_x - min_x) - 1 && screen_y > 1 && screen_y < (max_y - min_y) - 1{
-                    camera::map_set_bg(ctx, screen_x, screen_y, RGB::named(rltk::BLUE));
+                    top_down::map_set_bg(ctx, screen_x, screen_y, RGB::named(crate::engine::BLUE));
                     available_cells.push(idx);
                 }
             }
@@ -430,10 +428,8 @@ pub fn ranged_target(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuRes
         return (ItemMenuResult::Cancel, None);
     }
 
-    let mouse_pos = ctx.mouse_pos();
-    let mut mouse_map_pos = mouse_pos;
-    mouse_map_pos.0 += min_x;
-    mouse_map_pos.1 += min_y;
+    let mouse_map_pos = top_down::screen_to_map(&gs.ecs, ctx.mouse_pos());
+    let cursor = (mouse_map_pos.0 - min_x, mouse_map_pos.1 - min_y);
     let mut valid_target = false;
     for idx in available_cells.iter() {
         if idx.x == mouse_map_pos.0 && idx.y == mouse_map_pos.1 {
@@ -441,12 +437,12 @@ pub fn ranged_target(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuRes
         }
     }
     if valid_target {
-        camera::map_set_bg(ctx, mouse_pos.0, mouse_pos.1, RGB::named(rltk::CYAN));
+        top_down::map_set_bg(ctx, cursor.0, cursor.1, RGB::named(crate::engine::CYAN));
         if ctx.left_click {
             return (ItemMenuResult::Selected, Some(Point::new(mouse_map_pos.0, mouse_map_pos.1)));
         }
     } else {
-        camera::map_set_bg(ctx, mouse_pos.0, mouse_pos.1, RGB::named(rltk::RED));
+        top_down::map_set_bg(ctx, cursor.0, cursor.1, RGB::named(crate::engine::RED));
         if ctx.left_click {
             return (ItemMenuResult::Cancel, None);
         }
@@ -454,12 +450,12 @@ pub fn ranged_target(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuRes
     (ItemMenuResult::NoResponse, None)
 }
 
-pub fn game_over(ctx: &mut Rltk) -> GameOverResult {
-    ctx.print_color_centered(15, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Your journey has ended!");
-    ctx.print_color_centered(17, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), "One day, they will tell stories about you...");
-    ctx.print_color_centered(18, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), "Sadly, that day is not today...");
+pub fn game_over(ctx: &mut Ctx) -> GameOverResult {
+    ctx.print_color_centered(15, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Your journey has ended!");
+    ctx.print_color_centered(17, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), "One day, they will tell stories about you...");
+    ctx.print_color_centered(18, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), "Sadly, that day is not today...");
 
-    ctx.print_color_centered(20, RGB::named(rltk::MAGENTA), RGB::named(rltk::BLACK), "Press any key to return to the menu");
+    ctx.print_color_centered(20, RGB::named(crate::engine::MAGENTA), RGB::named(crate::engine::BLACK), "Press any key to return to the menu");
 
     match ctx.key {
         None => GameOverResult::NoSelection,
@@ -471,16 +467,16 @@ pub fn game_over(ctx: &mut Rltk) -> GameOverResult {
 #[derive(PartialEq, Clone, Copy)]
 pub enum CheatMenuResult {NoResponse, Cancel, TeleportToExit}
 
-pub fn show_cheat_mode(_gs: &mut State, ctx: &mut Rltk) -> CheatMenuResult {
+pub fn show_cheat_mode(_gs: &mut State, ctx: &mut Ctx) -> CheatMenuResult {
     let count = 2;
     let y = (25 - (count / 2)) as i32;
-    ctx.draw_box(15, y-2, 31, (count + 3) as i32, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK));
-    ctx.print_color(18, y-2, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Cheating Mode!");
-    ctx.print_color(18, y+count as i32 + 1, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Escape to Cancel");
+    ctx.draw_box(15, y-2, 31, (count + 3) as i32, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK));
+    ctx.print_color(18, y-2, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Cheating Mode!");
+    ctx.print_color(18, y+count as i32 + 1, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Escape to Cancel");
 
-    ctx.set(17, y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), rltk::to_cp437('('));
-    ctx.set(18, y, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), rltk::to_cp437('T'));
-    ctx.set(19, y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), rltk::to_cp437(')'));
+    ctx.set(17, y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), crate::engine::to_cp437('('));
+    ctx.set(18, y, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), crate::engine::to_cp437('T'));
+    ctx.set(19, y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), crate::engine::to_cp437(')'));
 
     ctx.print(21, y, "Teleport to exit");
 
@@ -488,8 +484,8 @@ pub fn show_cheat_mode(_gs: &mut State, ctx: &mut Rltk) -> CheatMenuResult {
         None => CheatMenuResult::NoResponse,
         Some(key) => {
             match key {
-                VirtualKeyCode::T => CheatMenuResult::TeleportToExit,
-                VirtualKeyCode::Escape => CheatMenuResult::Cancel,
+                Key::T => CheatMenuResult::TeleportToExit,
+                Key::Escape => CheatMenuResult::Cancel,
                 _ => CheatMenuResult::NoResponse
             }
         }
@@ -498,40 +494,40 @@ pub fn show_cheat_mode(_gs: &mut State, ctx: &mut Rltk) -> CheatMenuResult {
 
 const QUIT_AVAILABLE: bool = !cfg!(target_arch = "wasm32");
 
-pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
+pub fn main_menu(gs: &mut State, ctx: &mut Ctx) -> MainMenuResult {
     let runstate = gs.ecs.fetch::<RunState>();
     let save_exists = super::saveload_system::does_save_exist();
     let assets = gs.ecs.fetch::<RexAssets>();
     ctx.render_xp_sprite(&assets.menu, 0, 0);
 
-    ctx.draw_box_double(24, 18, 31, 10, RGB::named(rltk::WHEAT), RGB::named(rltk::BLACK));
+    ctx.draw_box_double(24, 18, 31, 10, RGB::named(crate::engine::WHEAT), RGB::named(crate::engine::BLACK));
 
-    ctx.print_color_centered( 20, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Text Based Roguelike");
-    ctx.print_color_centered( 21, RGB::named(rltk::CYAN), RGB::named(rltk::BLACK), "By Camden Tuttle");
-    ctx.print_color_centered( 22, RGB::named(rltk::GRAY), RGB::named(rltk::BLACK), "Use UP/Down Arrows and Enter");
+    ctx.print_color_centered( 20, RGB::named(crate::engine::YELLOW), RGB::named(crate::engine::BLACK), "Text Based Roguelike");
+    ctx.print_color_centered( 21, RGB::named(crate::engine::CYAN), RGB::named(crate::engine::BLACK), "By Camden Tuttle");
+    ctx.print_color_centered( 22, RGB::named(crate::engine::GRAY), RGB::named(crate::engine::BLACK), "Use UP/Down Arrows and Enter");
 
     let mut y = 24;
     if let RunState::MainMenu { menu_selection: selection } = *runstate {
         if selection == MainMenuSelection::NewGame {
-            ctx.print_color_centered( y, RGB::named(rltk::MAGENTA), RGB::named(rltk::BLACK), "Begin New Game");
+            ctx.print_color_centered( y, RGB::named(crate::engine::MAGENTA), RGB::named(crate::engine::BLACK), "Begin New Game");
         } else {
-            ctx.print_color_centered( y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), "Begin New Game");
+            ctx.print_color_centered( y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), "Begin New Game");
         }
         y += 1;
         if save_exists {
             if selection == MainMenuSelection::LoadGame {
-                ctx.print_color_centered( y, RGB::named(rltk::MAGENTA), RGB::named(rltk::BLACK), "Load Game");
+                ctx.print_color_centered( y, RGB::named(crate::engine::MAGENTA), RGB::named(crate::engine::BLACK), "Load Game");
             } else {
-                ctx.print_color_centered( y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), "Load Game");
+                ctx.print_color_centered( y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), "Load Game");
             }
             y += 1;
         }
 
         if QUIT_AVAILABLE {
             if selection == MainMenuSelection::Quit {
-                ctx.print_color_centered( y, RGB::named(rltk::MAGENTA), RGB::named(rltk::BLACK), "Quit");
+                ctx.print_color_centered( y, RGB::named(crate::engine::MAGENTA), RGB::named(crate::engine::BLACK), "Quit");
             } else {
-                ctx.print_color_centered( y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), "Quit");
+                ctx.print_color_centered( y, RGB::named(crate::engine::WHITE), RGB::named(crate::engine::BLACK), "Quit");
             }
         }
 
@@ -539,11 +535,11 @@ pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
             None => return MainMenuResult::NoSelection { selected: selection },
             Some(key) => {
                 match key {
-                    VirtualKeyCode::Escape => {
+                    Key::Escape => {
                         let selected = if QUIT_AVAILABLE { MainMenuSelection::Quit } else { selection };
                         return MainMenuResult::NoSelection { selected }
                     }
-                    VirtualKeyCode::Up => {
+                    Key::Up => {
                         let mut newselection;
                         match selection {
                             MainMenuSelection::NewGame => newselection = MainMenuSelection::Quit,
@@ -558,7 +554,7 @@ pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
                         }
                         return MainMenuResult::NoSelection { selected: newselection }
                     }
-                    VirtualKeyCode::Down => {
+                    Key::Down => {
                         let mut newselection;
                         match selection {
                             MainMenuSelection::NewGame => newselection = MainMenuSelection::LoadGame,
@@ -573,7 +569,7 @@ pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
                         }
                         return MainMenuResult::NoSelection { selected: newselection }
                     }
-                    VirtualKeyCode::Return => return MainMenuResult::Selected { selected: selection },
+                    Key::Return => return MainMenuResult::Selected { selected: selection },
                     _ => return MainMenuResult::NoSelection { selected: selection }
                 }
             }

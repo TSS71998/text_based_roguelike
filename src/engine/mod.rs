@@ -19,3 +19,4 @@ pub use input::{letter_to_option, Key};
 pub use pathfinding::{a_star_search, field_of_view, Algorithm2D, BaseMap, DijkstraMap, Exits, NavigationPath};
 pub use platform::{entropy_seed, log, main_loop, BError, GameState};
 pub use rng::RandomNumberGenerator;
+pub use terminal::{Ctx, CtxBuilder, LayerKind};

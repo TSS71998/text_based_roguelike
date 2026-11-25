@@ -4,7 +4,7 @@ use super::{Map, TileType};
 use crate::components::{Position, Viewshed};
 use crate::{OtherLevelPosition, map_builders};
 use specs::prelude::*;
-use rltk::Point;
+use crate::engine::Point;
 
 #[derive(Default, Serialize, Deserialize, Clone)]
 pub struct MasterDungeonMap {
@@ -53,7 +53,7 @@ pub fn level_transition(ecs: &mut World, new_depth: i32, offset: i32) -> Option<
 }
 
 fn transition_to_new_map(ecs: &mut World, new_depth: i32) -> Vec<Map> {
-    let mut rng = ecs.write_resource::<rltk::RandomNumberGenerator>();
+    let mut rng = ecs.write_resource::<crate::engine::RandomNumberGenerator>();
     let mut builder = map_builders::level_builder(new_depth, &mut rng, 80, 50);
     builder.build_map(&mut rng);
     if new_depth > 1 {

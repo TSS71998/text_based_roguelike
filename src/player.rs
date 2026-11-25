@@ -1,6 +1,6 @@
-use rltk::{VirtualKeyCode, Rltk, Point};
+use crate::engine::{Ctx, Direction, Point};
 use specs::prelude::*;
-use crate::{Faction, raws::Reaction};
+use crate::{Facing, Faction, raws::Reaction, actions::Action, render::ViewMode};
 
 use super::{Position, Player, Map, State, Viewshed, RunState, Pools, WantsToMelee, gamelog::GameLog, Item, 
             WantsToPickupItem, TileType, HungerClock, HungerState, EntityMoved, BlocksTile,
@@ -66,7 +66,7 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) -> RunState 
                 blocks_visibility.remove(potential_target);
                 blocks_movement.remove(potential_target);
                 let glyph = renderables.get_mut(potential_target).unwrap();
-                glyph.glyph = rltk::to_cp437('/');
+                glyph.glyph = crate::engine::to_cp437('/');
                 viewshed.dirty = true;
                 return Some(RunState::Ticking);
             }
@@ -232,77 +232,64 @@ fn use_consumable_hotkey(gs: &mut State, key: i32) -> RunState {
     RunState::Ticking
 }
 
-pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState{
-    if ctx.key.is_some() {
-        let key: Option<i32> = 
-            match ctx.key.unwrap() {
-                VirtualKeyCode::Key1 => Some(1),
-                VirtualKeyCode::Key2 => Some(2),
-                VirtualKeyCode::Key3 => Some(3),
-                VirtualKeyCode::Key4 => Some(4),
-                VirtualKeyCode::Key5 => Some(5),
-                VirtualKeyCode::Key6 => Some(6),
-                VirtualKeyCode::Key7 => Some(7),
-                VirtualKeyCode::Key8 => Some(8),
-                VirtualKeyCode::Key9 => Some(9),
-                _ => None
-            };
-        if let Some(key) = key {
-            return use_consumable_hotkey(gs, key - 1);
+pub fn player_input(gs: &mut State, ctx: &mut Ctx) -> RunState{
+    let Some(key) = ctx.key else { return RunState::AwaitingInput };
+    let view = crate::render::effective_view(&gs.ecs);
+    match crate::actions::action_for_key(key, view) {
+        Some(action) => perform(gs, action),
+        None => RunState::AwaitingInput
+    }
+}
+
+fn player_facing(ecs: &World) -> Direction {
+    let player = *ecs.fetch::<Entity>();
+    ecs.read_storage::<Facing>().get(player).map_or(Direction::North, |f| f.dir)
+}
+
+fn set_player_facing(ecs: &mut World, dir: Direction) {
+    let player = *ecs.fetch::<Entity>();
+    let _ = ecs.write_storage::<Facing>().insert(player, Facing { dir });
+}
+
+fn perform(gs: &mut State, action: Action) -> RunState {
+    match action {
+        Action::Move(dir) => {
+            set_player_facing(&mut gs.ecs, dir);
+            let (dx, dy) = dir.delta();
+            try_move_player(dx, dy, &mut gs.ecs)
         }
+        Action::Step(eighths) => {
+            let (dx, dy) = player_facing(&gs.ecs).rotated(eighths).delta();
+            try_move_player(dx, dy, &mut gs.ecs)
+        }
+        Action::Turn(eighths) => {
+            let dir = player_facing(&gs.ecs).rotated(eighths);
+            set_player_facing(&mut gs.ecs, dir);
+            RunState::AwaitingInput
+        }
+        Action::ToggleView => {
+            let mode = gs.ecs.fetch::<ViewMode>().toggled();
+            *gs.ecs.write_resource::<ViewMode>() = mode;
+            let facing = player_facing(&gs.ecs);
+            if mode == ViewMode::FirstPerson && !facing.is_cardinal() {
+                set_player_facing(&mut gs.ecs, facing.rotated(-1));
+            }
+            RunState::AwaitingInput
+        }
+        Action::UseHotkey(n) => use_consumable_hotkey(gs, n),
+        Action::PickUp => {
+            get_item(&mut gs.ecs);
+            RunState::Ticking
+        }
+        Action::Inventory => RunState::ShowInventory,
+        Action::Drop => RunState::ShowDropItem,
+        Action::Remove => RunState::ShowRemoveItem,
+        Action::SaveAndQuit => RunState::SaveGame,
+        Action::CheatMenu => RunState::ShowCheatMenu,
+        Action::Wait => skip_turn(&mut gs.ecs),
+        Action::Descend => if try_next_level(&mut gs.ecs) { RunState::NextLevel } else { RunState::Ticking },
+        Action::Ascend => if try_previous_level(&mut gs.ecs) { RunState::PreviousLevel } else { RunState::Ticking },
     }
-    
-    match ctx.key {
-        None => { return RunState::AwaitingInput;}
-        Some(key) => match key {
-            VirtualKeyCode::Left | 
-            VirtualKeyCode::A => return try_move_player(-1, 0, &mut gs.ecs),
-
-            VirtualKeyCode::Right |
-            VirtualKeyCode::D => return try_move_player(1, 0, &mut gs.ecs),
-            
-            VirtualKeyCode::Up |
-            VirtualKeyCode::W => return try_move_player(0, -1, &mut gs.ecs),
-
-            VirtualKeyCode::Down |
-            VirtualKeyCode::S => return try_move_player(0, 1, &mut gs.ecs),
-
-            VirtualKeyCode::E => return try_move_player(1, -1, &mut gs.ecs),
-
-            VirtualKeyCode::Q => return try_move_player(-1, -1, &mut gs.ecs),
-
-            VirtualKeyCode::C => return try_move_player(1, 1, &mut gs.ecs),
-            
-            VirtualKeyCode::Z => return try_move_player(-1, 1, &mut gs.ecs),
-
-            VirtualKeyCode::G => get_item(&mut gs.ecs),
-
-            VirtualKeyCode::I => return RunState::ShowInventory,
-
-            VirtualKeyCode::B => return RunState::ShowDropItem,
-
-            VirtualKeyCode::Escape => return RunState::SaveGame,
-
-            VirtualKeyCode::Backslash => return RunState::ShowCheatMenu,
-
-            VirtualKeyCode::Period => {
-                if try_next_level(&mut gs.ecs) {
-                    return  RunState::NextLevel;
-                }
-            },
-            VirtualKeyCode::Comma => {
-                if try_previous_level(&mut gs.ecs) {
-                    return  RunState::PreviousLevel;
-                }
-            },
-            VirtualKeyCode::Space => return skip_turn(&mut gs.ecs),
-
-            VirtualKeyCode::R => return RunState::ShowRemoveItem,
-
-            _ => { return RunState::AwaitingInput;}
-        },
-    }
-    RunState::Ticking
 }
 
 

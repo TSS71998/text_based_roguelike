@@ -4,7 +4,7 @@ pub struct StraightLineCorridors {}
 
 impl MetaMapBuilder for StraightLineCorridors {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.corridors(rng, build_data);
     }
 }
@@ -15,7 +15,7 @@ impl StraightLineCorridors {
         Box::new(StraightLineCorridors{})
     }
 
-    fn corridors(&mut self, _rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn corridors(&mut self, _rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         let rooms: Vec<Rect>;
         if let Some(rooms_builder) = &build_data.rooms {
             rooms = rooms_builder.clone();
@@ -28,12 +28,12 @@ impl StraightLineCorridors {
         for (i, room) in rooms.iter().enumerate() {
             let mut room_distance: Vec<(usize, f32)> = Vec::new();
             let room_center = room.center();
-            let room_center_pt = rltk::Point::new(room_center.0, room_center.1);
+            let room_center_pt = crate::engine::Point::new(room_center.0, room_center.1);
             for (j, other_room) in rooms.iter().enumerate() {
                 if i != j && !connected.contains(&j) {
                     let other_center = other_room.center();
-                    let other_center_pt = rltk::Point::new(other_center.0, other_center.1);
-                    let distance = rltk::DistanceAlg::Pythagoras.distance2d(room_center_pt, other_center_pt);
+                    let other_center_pt = crate::engine::Point::new(other_center.0, other_center.1);
+                    let distance = crate::engine::DistanceAlg::Pythagoras.distance2d(room_center_pt, other_center_pt);
                     room_distance.push((j, distance));
                 }
             }
@@ -41,10 +41,10 @@ impl StraightLineCorridors {
             if !room_distance.is_empty() {
                 room_distance.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
                 let dest_center = rooms[room_distance[0].0].center();
-                let line = rltk::line2d(
-                    rltk::LineAlg::Bresenham,
+                let line = crate::engine::line2d(
+                    crate::engine::LineAlg::Bresenham,
                     room_center_pt,
-                    rltk::Point::new(dest_center.0, dest_center.1)
+                    crate::engine::Point::new(dest_center.0, dest_center.1)
                 );
 
                 let mut corridor = Vec::new();

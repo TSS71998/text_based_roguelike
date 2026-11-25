@@ -251,7 +251,7 @@ pub fn read_map(r: &mut ByteReader) -> DecodeResult<Map> {
         view_blocked: vec![false; count],
         name,
         outdoors,
-        light: vec![rltk::RGB::from_f32(0.0, 0.0, 0.0); count],
+        light: vec![crate::engine::RGB::from_f32(0.0, 0.0, 0.0); count],
     })
 }
 

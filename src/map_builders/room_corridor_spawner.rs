@@ -3,7 +3,7 @@ pub struct CorridorSpawner {}
 
 impl MetaMapBuilder for CorridorSpawner {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }
@@ -14,7 +14,7 @@ impl CorridorSpawner {
         Box::new(CorridorSpawner{})
     }
 
-    fn build(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         if let Some(corridors) = &build_data.corridors {
             for c in corridors.iter() {
                 let depth = build_data.map.depth;

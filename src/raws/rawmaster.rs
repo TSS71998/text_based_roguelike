@@ -3,28 +3,42 @@ use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
 use crate::{attr_bonus, mana_at_level, npc_hp, random_table::RandomTable, raws::faction_structs::Reaction};
 use super::{Raws, MobLight};
 use crate::components::*;
-use regex::Regex;
 
 pub fn parse_dice_string(dice: &str) -> (i32, i32, i32) {
-    lazy_static!{
-        static ref DICE_RE: Regex = Regex::new(r"(\d+)d(\d+)([\+\-]\d+)?").unwrap();
-    }
-    let mut n_dice = 1;
-    let mut die_type = 4;
-    let mut die_bonus = 0;
-    for cap in DICE_RE.captures_iter(dice) {
-        if let Some(group) = cap.get(1) {
-            n_dice = group.as_str().parse::<i32>().expect("Not a digit");
-        }
-        if let Some(group) = cap.get(2) {
-            die_type = group.as_str().parse::<i32>().expect("Not a digit");            
-        }
-        if let Some(group) = cap.get(3) {
-            die_bonus = group.as_str().parse::<i32>().expect("Not a digit");            
-        }
+    fn number(s: &str) -> Option<(i32, &str)> {
+        let end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
+        if end == 0 { return None; }
+        Some((s[..end].parse().ok()?, &s[end..]))
     }
 
-    (n_dice, die_type, die_bonus)
+    let dice = dice.trim();
+    let parsed = (|| {
+        let (n, rest) = number(dice)?;
+        let (sides, rest) = number(rest.strip_prefix('d')?)?;
+        let bonus = match rest.chars().next() {
+            Some(sign @ ('+' | '-')) => {
+                let (b, _) = number(&rest[1..])?;
+                if sign == '-' { -b } else { b }
+            }
+            _ => 0,
+        };
+        Some((n, sides, bonus))
+    })();
+    parsed.unwrap_or((1, 4, 0))
+}
+
+#[cfg(test)]
+mod dice_tests {
+    use super::parse_dice_string;
+ 
+    #[test]
+    fn parses_dice() {
+        assert_eq!(parse_dice_string("2d6"), (2, 6, 0));
+        assert_eq!(parse_dice_string("1d8+2"), (1, 8, 2));
+        assert_eq!(parse_dice_string("3d4-1"), (3, 4, -1));
+        assert_eq!(parse_dice_string(" 10d10+15 "), (10, 10, 15));
+        assert_eq!(parse_dice_string("nonsense"), (1, 4, 0));
+    }
 }
 
 pub enum SpawnType {
@@ -60,28 +74,28 @@ impl RawMaster {
         let mut used_names: HashSet<String> = HashSet::new();
         for (i, item) in self.raws.items.iter().enumerate() {
             if used_names.contains(&item.name){
-                rltk::console::log(format!("WARNING: duplicate item name in raws [{}]", item.name));
+                crate::engine::log(format!("WARNING: duplicate item name in raws [{}]", item.name));
             }
             self.item_index.insert(item.name.clone(), i);
             used_names.insert(item.name.clone());
         }
         for (i, mob) in self.raws.mobs.iter().enumerate() {
             if used_names.contains(&mob.name){
-                rltk::console::log(format!("WARNING: duplicate mob name in raws [{}]", mob.name));
+                crate::engine::log(format!("WARNING: duplicate mob name in raws [{}]", mob.name));
             }
             self.mob_index.insert(mob.name.clone(), i);
             used_names.insert(mob.name.clone());
         }
         for (i, prop) in self.raws.props.iter().enumerate() {
             if used_names.contains(&prop.name){
-                rltk::console::log(format!("WARNING: duplicate prop name in raws [{}]", prop.name));
+                crate::engine::log(format!("WARNING: duplicate prop name in raws [{}]", prop.name));
             }
             self.prop_index.insert(prop.name.clone(), i);
             used_names.insert(prop.name.clone());
         }
         for spawn in self.raws.spawn_table.iter() {
             if !used_names.contains(&spawn.name){
-                rltk::console::log(format!("WARNING: Spawn tables references unspecified entity [{}]", spawn.name));
+                crate::engine::log(format!("WARNING: Spawn tables references unspecified entity [{}]", spawn.name));
             }
         }
 
@@ -129,7 +143,7 @@ pub fn string_to_slot(slot: &str) -> EquipmentSlot {
         "Feet" => EquipmentSlot::Feet,
         "Hands" => EquipmentSlot::Hands,
         "Melee" => EquipmentSlot::Melee,
-        _ => {rltk::console::log(format!("Warning: unknown equipment slot type [{}]", slot)); EquipmentSlot::Melee}
+        _ => {crate::engine::log(format!("Warning: unknown equipment slot type [{}]", slot)); EquipmentSlot::Melee}
     }
 }
 
@@ -179,7 +193,7 @@ pub fn spawn_named_item(raws: &RawMaster, ecs: &mut World, key: &str, pos: Spawn
                     "magic_mapping" => {eb = eb.with(MagicMapper{})},
                     "food" => {eb = eb.with(ProvidesFood{})}
                     _ => {
-                        rltk::console::log(format!("Warning: consumable effect {} not implemented.", effect_name));
+                        crate::engine::log(format!("Warning: consumable effect {} not implemented.", effect_name));
                     }
                 }
             }
@@ -215,7 +229,7 @@ pub fn spawn_named_item(raws: &RawMaster, ecs: &mut World, key: &str, pos: Spawn
 
 fn light_component(light: &MobLight) -> LightSource {
     LightSource::flickering(
-        rltk::RGB::from_hex(&light.color).expect("Bad light color"), 
+        crate::engine::RGB::from_hex(&light.color).expect("Bad light color"), 
         light.range, 
         light.flicker.unwrap_or(0.0)
     )
@@ -299,7 +313,7 @@ pub fn spawn_named_mob(raws: &RawMaster, ecs: &mut World, key: &str, pos: SpawnT
                     "Melee" => {skills.skills.insert(Skill::Melee, *sk.1);},
                     "Defense" => {skills.skills.insert(Skill::Defense, *sk.1);},
                     "Magic" => {skills.skills.insert(Skill::Magic, *sk.1);},
-                    _ => {rltk::console::log(format!("Unknown skill reference: [{}]", sk.0));}
+                    _ => {crate::engine::log(format!("Unknown skill reference: [{}]", sk.0));}
                 }
             }
         }
@@ -437,14 +451,14 @@ fn spawn_position<'a>(pos: SpawnType, new_entity: EntityBuilder<'a>, tag: &str, 
 
 fn get_renderable_component(renderable: &super::item_structs::Renderable) -> crate::components::Renderable {
     crate::components::Renderable{
-        glyph: rltk::to_cp437(renderable.glyph.chars().next().unwrap()),
-        fg: rltk::RGB::from_hex(&renderable.fg).expect("Invalid RGB"),
-        bg: rltk::RGB::from_hex(&renderable.bg).expect("Invalid RGB"),
+        glyph: crate::engine::to_cp437(renderable.glyph.chars().next().unwrap()),
+        fg: crate::engine::RGB::from_hex(&renderable.fg).expect("Invalid RGB"),
+        bg: crate::engine::RGB::from_hex(&renderable.bg).expect("Invalid RGB"),
         render_order: renderable.order
     }
 }
 
-pub fn get_item_drop(raws: &RawMaster, rng: &mut rltk::RandomNumberGenerator, table: &str) -> Option<String> {
+pub fn get_item_drop(raws: &RawMaster, rng: &mut crate::engine::RandomNumberGenerator, table: &str) -> Option<String> {
     if raws.loot_index.contains_key(table) {
         let mut rt = RandomTable::new();
         let available_options = &raws.raws.loot_tables[raws.loot_index[table]];

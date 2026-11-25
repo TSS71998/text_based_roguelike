@@ -1,10 +1,10 @@
 use super::{MetaMapBuilder, BuilderMap, TileType};
-use rltk::RandomNumberGenerator;
+use crate::engine::RandomNumberGenerator;
 
 pub struct DoorPlacement {}
 
 impl MetaMapBuilder for DoorPlacement {
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.doors(rng, build_data)
     }
 }

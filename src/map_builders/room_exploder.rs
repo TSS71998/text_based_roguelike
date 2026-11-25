@@ -3,7 +3,7 @@ pub struct RoomExploder {}
 
 impl MetaMapBuilder for RoomExploder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }
@@ -14,7 +14,7 @@ impl RoomExploder {
         Box::new(RoomExploder{})
     }
 
-    fn build(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(&mut self, rng: &mut crate::engine::RandomNumberGenerator, build_data: &mut BuilderMap) {
         let rooms: Vec<Rect>;
         if let Some(rooms_builder) = &build_data.rooms {
             rooms = rooms_builder.clone();
@@ -46,7 +46,7 @@ impl RoomExploder {
                             1 => {if drunk_x > 2 {drunk_x -= 1;}}
                             2 => {if drunk_x < build_data.map.width - 2 {drunk_x += 1;}}
                             3 => {if drunk_y > 2 {drunk_y -= 1;}}
-                            _ => {if drunk_x < build_data.map.height - 2 {drunk_y += 1;}}
+                            _ => {if drunk_y < build_data.map.height - 2 {drunk_y += 1;}}
                         }
 
                         drunk_life -= 1;

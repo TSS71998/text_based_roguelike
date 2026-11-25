@@ -26,7 +26,7 @@
 
 ## About
 
-**text_based_roguelike** is a classic, terminal-style roguelike built with the Rust [roguelike toolkit](https://bfnightly.bracketproductions.com/chapter_0.html) (bracket-lib). It follows the structure of the ["Roguelike Tutorial - In Rust"](https://bfnightly.bracketproductions.com/chapter_0.html) as a starting point for learning Rust, with the long-term goal of growing into its own, more unique dungeon-crawling experience.
+**text_based_roguelike** is a classic, terminal-style roguelike written in Rust, drawn by its own small software renderer. It follows the structure of the ["Roguelike Tutorial - In Rust"](https://bfnightly.bracketproductions.com/chapter_0.html) as a starting point for learning Rust, with the long-term goal of growing into its own, more unique dungeon-crawling experience.
 
 This project exists first and foremost as a way to learn Rust fundamentals — expect the codebase to evolve quickly as new mechanics and ideas are layered on top of the original tutorial foundation.
 
@@ -35,7 +35,9 @@ This project exists first and foremost as a way to learn Rust fundamentals — e
 - Classic ASCII/glyph-based rendering
 - Procedurally generated dungeons
 - Turn-based movement and combat
-- Built entirely in Rust using the bracket-lib roguelike toolkit
+- A small in-house engine: software rendering into one pixel buffer, no GPU or graphics library needed
+- A switchable first-person view (work in progress: the view and controls are wired up, the 3D renderer is next)
+ 
 
 > More features are being added as the project grows beyond its tutorial origins — see the [Roadmap](#roadmap) below.
 
@@ -58,15 +60,35 @@ cargo run
 # Or build an optimized release binary
 cargo build --release
 ```
+### Code Layout
+ 
+- `src/engine/` — the engine, with no game knowledge: software terminal and pixel layers, font, colours, field of view, pathfinding, random numbers, PNG and REX Paint loading, and the desktop (minifb) and web (canvas) platform layers.
+- `src/render/` — how the world is drawn: `top_down.rs` (the map) and `first_person.rs`, chosen by the `ViewMode` resource.
+- `src/actions.rs` — keys to player actions; first person reads movement relative to the player's `Facing`.
+- `src/map/tiletype.rs` — one `TileDef` per tile type: walkability, opacity, path cost and how the 3D view should build it.
+ 
 
 ## Gameplay
 
-Movement and actions use standard roguelike keybindings (arrow keys / numpad or vi-keys, depending on build configuration). Explore the dungeon, fight monsters, and try to survive as deep as you can — permadeath applies, as is roguelike tradition.
-
+Explore the dungeon, fight monsters, and try to survive as deep as you can — permadeath applies, as is roguelike tradition.
+ 
+| Key | Map view | First-person view |
+| --- | --- | --- |
+| Arrows / WASD | Move | Up/W, Down/S: step forward/back; Left/A, Right/D: turn |
+| Q E Z C | Move diagonally | Q/E: step left/right (strafe) |
+| Tab | Switch to first person | Switch to the map |
+| G | Pick up | Pick up |
+| I / B / R | Use / drop / remove an item | same |
+| 1–9 | Use a consumable | same |
+| . / , | Go down / up stairs | same |
+| Space | Wait a turn | same |
+| Escape | Save and return to the menu | same |
+| F12 | Save a screenshot (desktop) | same |
+ 
 ### Play in the Browser
 
 The game is built to WebAssembly and published to GitHub Pages on every push to `master`:
-**[tss71998.github.io/text_based_roguelike](https://tss71998.github.io/text_based_roguelike/)**. It needs a browser with WebGL2 (any current Chrome, Firefox, Edge or Safari). Saving isn't available in the web version yet.
+**[tss71998.github.io/text_based_roguelike](https://tss71998.github.io/text_based_roguelike/)**. It runs in any current browser. Saving isn't available in the web version yet.
 
 To build the web version locally:
 
@@ -97,7 +119,8 @@ Contributions, ideas, and issue reports are welcome as this project develops.
 ## Acknowledgements
 
 - Built with the [Rust Roguelike Tutorial](https://bfnightly.bracketproductions.com/chapter_0.html) by [Bracket Productions](https://bracketproductions.com/) as a foundation
-- Powered by [bracket-lib](https://github.com/amethyst/bracket-lib)
+- The 8x8 CP437 font (`resources/terminal8x8.png`) comes from [bracket-lib](https://github.com/amethyst/bracket-lib) (MIT), which the game was originally built on
+- The basis of the engine comes from [bracket-lib](https://github.com/amethyst/bracket-lib)
 
 ## License
 
